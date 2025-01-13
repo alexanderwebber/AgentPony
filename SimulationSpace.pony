@@ -17,5 +17,5 @@ class SimulationSpace
 
     fun ref loadRandomPositions()? =>
         for i in Range(0, numCells) do 
-            cells(i)? = Cell(i, 0)
+            cells(i)? = Cell(i, rand.int(4))
         end
