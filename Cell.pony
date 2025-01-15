@@ -1,16 +1,16 @@
 use "promises"
 
 actor Cell
-    var position: USize
-    var status:   U64 val
+    var _position: USize
+    var _status:   U64 val
 
     new create(position': USize, initalStatus: U64 val) =>
-        position = position'
-        status   = initalStatus
+        _position = position'
+        _status   = initalStatus
 
     be getPosition(p: Promise[USize]) =>
-        p(position)
+        p(_position)
 
     be getStatus(p: Promise[U64]) =>
-        p(status)
+        p(_status)
     
