@@ -10,5 +10,9 @@ actor Main
 
         let sim: SimulationSpace = SimulationSpace(simSideLength, numCells, _out)
 
+        try sim.loadRandomPositions()? else _out.print("Error loading cells.") end
+
         _out.print("There are " + numCells.string() + " agents.")
         _out.print("Side length of simulation space is: " + sim.getSideLength().string())
+        _out.print("Printing cell statuses: ")
+        try sim.printCells()? else _out.print("Error printing cell statuses.") end

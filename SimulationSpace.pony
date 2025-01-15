@@ -1,5 +1,6 @@
 use "collections"
 use "Random"
+use "promises"
 
 class SimulationSpace
     let _sideLength: USize val
@@ -19,6 +20,10 @@ class SimulationSpace
 
     fun ref loadRandomPositions()? =>
         for i in Range(0, _numCells) do 
-            _cells(i)? = Cell(i, _rand.int(4))
+            _cells(i)? = Cell(i, _rand.int(4), _out)
         end
 
+    fun printCells()? =>
+        for i in Range(0, _numCells) do
+            _cells(i)?.printStatus()
+        end
