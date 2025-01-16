@@ -1,9 +1,10 @@
 use "promises"
 
 actor Cell
-    var _position: USize
-    var _status:   U64 val
-    let _out:      OutStream
+    var _position:  USize
+    var _status:    U64 val
+    let _out:       OutStream
+    let _neighbors: Array[Cell] = Array[Cell](8)
 
     new create(position': USize, initalStatus: U64 val, out: OutStream) =>
         _position = position'
@@ -21,4 +22,7 @@ actor Cell
 
     be printStatus() =>
         _out.print(_status.string())
-    
+
+    fun setNeighbors(sideLength: USize) =>
+        // Assuming periodic boundary conditions
+        // (((_position +/- 1/0) % sideLength) +/- sideLength / 0) % (sideLength * sideLength)
