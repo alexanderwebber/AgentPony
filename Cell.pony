@@ -23,6 +23,6 @@ actor Cell
     be printStatus() =>
         _out.print(_status.string())
 
-    fun setNeighbors(sideLength: USize) =>
-        // Assuming periodic boundary conditions
-        // (((_position +/- 1/0) % sideLength) +/- sideLength / 0) % (sideLength * sideLength)
+    be setNeighbor(neighbor: Cell) =>
+        _neighbors.push(neighbor)
+        
