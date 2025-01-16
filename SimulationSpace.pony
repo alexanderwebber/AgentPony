@@ -28,3 +28,29 @@ class SimulationSpace
         for i in Range(0, _numCells) do
             try _cells(i)?.printStatus() else _out.print("no cell here") end
         end
+
+    fun loadNeighbors() =>
+        // Assuming periodic boundary conditions
+        // (((_position +/- 1/0) % sideLength) +/- sideLength / 0) % (sideLength * sideLength)
+        for i in Range(0, _numCells) do
+            let neighborOne   = (((i - 1) % _sideLength) - _sideLength) % (_sideLength * _sideLength)
+            let neighborTwo   = (((i)     % _sideLength) - _sideLength) % (_sideLength * _sideLength)
+            let neighborThree = (((i + 1) % _sideLength) - _sideLength) % (_sideLength * _sideLength)
+
+            let neighborFour  = (((i - 1) % _sideLength)) % (_sideLength * _sideLength)
+            let neighborFive  = (((i + 1) % _sideLength)) % (_sideLength * _sideLength)
+
+            let neighborSix   = (((i - 1) % _sideLength) + _sideLength) % (_sideLength * _sideLength)
+            let neighborSeven = (((i)     % _sideLength) + _sideLength) % (_sideLength * _sideLength)
+            let neighborEight = (((i + 1) % _sideLength) + _sideLength) % (_sideLength * _sideLength)
+
+            try _cells(i)?.setNeighbor(_cells(neighborOne)?)   end
+            try _cells(i)?.setNeighbor(_cells(neighborTwo)?)   end
+            try _cells(i)?.setNeighbor(_cells(neighborThree)?) end
+            try _cells(i)?.setNeighbor(_cells(neighborFour)?)  end
+            try _cells(i)?.setNeighbor(_cells(neighborFive)?)  end
+            try _cells(i)?.setNeighbor(_cells(neighborSix)?)   end
+            try _cells(i)?.setNeighbor(_cells(neighborSeven)?) end
+            try _cells(i)?.setNeighbor(_cells(neighborEight)?) end
+
+        end
