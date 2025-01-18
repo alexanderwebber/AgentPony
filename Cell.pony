@@ -25,4 +25,11 @@ actor Cell
 
     be setNeighbor(neighbor: Cell) =>
         _neighbors.push(neighbor)
+
+    // be calculateState() =>
+    //     var aliveNeighbor: U8 ref = 0
+    //     var deadNeighbor:  U8 ref = 0
+    //     var emptyNeighbor: U8 ref = 0
+
+    //     for neighbor
         
