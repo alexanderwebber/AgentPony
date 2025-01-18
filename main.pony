@@ -5,7 +5,7 @@ actor Main
     new create(env: Env) =>
         _out = env.out
 
-        let simSideLength        = try env.args(2)?.isize()? else 5 end
+        let simSideLength        = try env.args(2)?.usize()? else 5 end
         let sim: SimulationSpace = SimulationSpace(simSideLength, _out)
         sim.loadRandomPositions()
         sim.loadNeighbors()
