@@ -24,16 +24,6 @@ class SimulationSpace
             _cells.push(Cell(i, _rand.next() % 4, _out))
         end
 
-    fun printCells() =>
-        for i in Range(0, _numCells) do
-            try _cells(i)?.printStatus() else _out.print("no cell here") end
-        end
-
-    fun printNumCellNeighbors() =>
-        for i in Range(0, _numCells) do
-            try _cells(i)?.printNumNeighbors() else _out.print("no cell here") end
-        end
-
     fun loadNeighbors() =>
         let neighborCoordinates: Array[(ISize, ISize)] = [(-1, -1); (0, -1); (1, -1); (-1, 0); (1, 0); (-1, 1); (0, 1); (1, 1)]
 
@@ -44,4 +34,19 @@ class SimulationSpace
 
                 try _cells(cellIndex)?.setNeighbor(_cells(neighbor)?)   end
             end
+        end
+
+    fun updateCellStatuses() =>
+        for cell in _cells.values() do 
+            cell.updateStatus()
+        end
+
+    fun printCells() =>
+        for i in Range(0, _numCells) do
+            try _cells(i)?.printStatus() else _out.print("no cell here") end
+        end
+
+    fun printNumCellNeighbors() =>
+        for i in Range(0, _numCells) do
+            try _cells(i)?.printNumNeighbors() else _out.print("no cell here") end
         end

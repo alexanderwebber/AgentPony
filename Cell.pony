@@ -17,14 +17,19 @@ actor Cell
     be getStatus(p: Promise[U64]) =>
         p(_status)
 
+    be setNeighbor(neighbor: Cell) =>
+        _neighbors.push(neighbor)
+
+    be updateStatus() =>
+        for neighbor in _neighbors.values() do 
+            _out.print("hello, world!")
+        end
+
+    be printNumNeighbors() =>
+        _out.print(_neighbors.size().string())
+
     be printPosition() =>
         _out.print(_position.string())
 
     be printStatus() =>
         _out.print(_status.string())
-
-    be setNeighbor(neighbor: Cell) =>
-        _neighbors.push(neighbor)
-
-    be printNumNeighbors() =>
-        _out.print(_neighbors.size().string())

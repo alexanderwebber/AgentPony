@@ -9,6 +9,7 @@ actor Main
         let sim: SimulationSpace = SimulationSpace(simSideLength, _out)
         sim.loadRandomPositions()
         sim.loadNeighbors()
+        sim.updateCellStatuses()
 
         _out.print("Side length of simulation space is: " + sim.getSideLength().string())
         _out.print("There are " + (simSideLength * simSideLength).string() + " cells.")
