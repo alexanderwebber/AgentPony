@@ -21,7 +21,7 @@ class SimulationSpace
 
     fun ref loadRandomPositions() =>
         for i in Range(0, _numCells) do 
-            _cells.push(Cell(i, _rand.next() % 4, _out))
+            _cells.push(Cell(i, _rand.next() % 2, _out))
         end
 
     fun loadNeighbors() =>
