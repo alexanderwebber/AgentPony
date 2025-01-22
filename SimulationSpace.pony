@@ -40,13 +40,3 @@ class SimulationSpace
         for cell in _cells.values() do 
             cell.updateStatus()
         end
-
-    fun printCells() =>
-        for i in Range(0, _numCells) do
-            try _cells(i)?.printStatus() else _out.print("no cell here") end
-        end
-
-    fun printNumCellNeighbors() =>
-        for i in Range(0, _numCells) do
-            try _cells(i)?.printNumNeighbors() else _out.print("no cell here") end
-        end

@@ -11,8 +11,8 @@ actor Cell
         _status   = initalStatus
         _out      = out
 
-    be getPosition(p: Promise[USize]) =>
-        p(_position)
+    fun getPosition() =>
+        _position
 
     be getStatus(p: Promise[U64]) =>
         p(_status)
@@ -21,7 +21,7 @@ actor Cell
         _neighbors.push(neighbor)
 
     be updateStatus() =>
-        let neighborStatusPromises: Array[Promise[U64]] iso = Array[Promise[U64]](8)
+        let neighborStatusPromises: Array[Promise[U64]] = Array[Promise[U64]](8)
 
         for neighbor in _neighbors.values() do 
             let p = Promise[U64]
@@ -29,7 +29,7 @@ actor Cell
             neighborStatusPromises.push(p)
         end
 
-        Promises[U64].join(consume neighborStatusPromises)
+        Promises[U64].join(neighborStatusPromises.values())
         .next[None](recover this~receiveNeighborStatuses() end)
 
     be receiveNeighborStatuses(neighborStatuses: Array[U64] val) =>
@@ -48,12 +48,3 @@ actor Cell
         else
             _status = 0    
         end
-
-    be printNumNeighbors() =>
-        _out.print(_neighbors.size().string())
-
-    be printPosition() =>
-        _out.print(_position.string())
-
-    be printStatus() =>
-        _out.print(_status.string())
