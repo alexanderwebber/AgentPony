@@ -36,7 +36,7 @@ class SimulationSpace
 
         neighborSum
 
-    fun calculateNeighbor(xCoordinate: ISize, yCoordinate: ISize, cellIndex: USize) =>
+    fun calculateNeighbor(xCoordinate: ISize, yCoordinate: ISize, cellIndex: USize): USize =>
         ((((cellIndex.isize() + xCoordinate) %% _sideLength.isize()) + (yCoordinate * _sideLength.isize())) %% (_sideLength * _sideLength).isize()).usize()
 
     fun loadNeighbors() =>
