@@ -3,11 +3,12 @@ use "Random"
 use "promises"
 
 class SimulationSpace
-    let _sideLength: USize val
-    let _numCells:   USize val
-    let _cells:      Array[Cell]
-    let _out:        OutStream
-    let _rand:       Rand
+    let _sideLength:         USize val
+    let _numCells:           USize val
+    let _cells:              Array[Cell]
+    let _out:                OutStream
+    let _rand:               Rand
+    let neighborCoordinates: Array[(ISize, ISize)] = [(-1, -1); (0, -1); (1, -1); (-1, 0); (1, 0); (-1, 1); (0, 1); (1, 1)]
 
     new create(sideLength': USize, out: OutStream) =>
         _sideLength = recover val sideLength' end
@@ -24,15 +25,26 @@ class SimulationSpace
             _cells.push(Cell(i, _rand.next() % 2, _out))
         end
 
-    fun loadNeighbors() =>
-        let neighborCoordinates: Array[(ISize, ISize)] = [(-1, -1); (0, -1); (1, -1); (-1, 0); (1, 0); (-1, 1); (0, 1); (1, 1)]
+    fun returnNeighborSum(cellIndex: USize): USize =>
+        var neighborSum: USize = 0
 
+        for (x, y) in neighborCoordinates.values() do
+            let neighbor: USize = calculateNeighbor(x, y, cellIndex)
+            
+            neighborSum         = neighborSum + neighbor
+        end
+
+        neighborSum
+
+    fun calculateNeighbor(xCoordinate: ISize, yCoordinate: ISize, cellIndex: USize) =>
+        ((((cellIndex.isize() + xCoordinate) %% _sideLength.isize()) + (yCoordinate * _sideLength.isize())) %% (_sideLength * _sideLength).isize()).usize()
+
+    fun loadNeighbors() =>
         for cellIndex in Range(0, _numCells) do
             for (x, y) in neighborCoordinates.values() do
+                let neighbor: USize = calculateNeighbor(x, y, cellIndex)
 
-                let neighbor: USize = ((((cellIndex.isize() + x) %% _sideLength.isize()) + (y * _sideLength.isize())) %% (_sideLength * _sideLength).isize()).usize()
-
-                try _cells(cellIndex)?.setNeighbor(_cells(neighbor)?)   end
+                try _cells(cellIndex)?.setNeighbor(_cells(neighbor)?) end
             end
         end
 

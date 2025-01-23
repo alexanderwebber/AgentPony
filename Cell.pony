@@ -11,9 +11,6 @@ actor Cell
         _status   = initalStatus
         _out      = out
 
-    fun getPosition() =>
-        _position
-
     be getStatus(p: Promise[U64]) =>
         p(_status)
 
