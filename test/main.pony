@@ -11,7 +11,13 @@ actor Main is TestList
         test(_TestLoadNeighbors)
     
 class iso _TestLoadNeighbors is UnitTest
-    fun name(): String => "loadNeighbors"
+    fun name(): String => "calculate the neighbor sum"
 
     fun apply(h: TestHelper) =>
-        h.assert_eq[U32](4, 2 + 2)
+        let sim5: SimulationSpace = SimulationSpace(5)
+        h.assert_eq[USize](90, sim5.returnNeighborSum(0))
+        h.assert_eq[USize](96, sim5.returnNeighborSum(12))
+
+        let sim3: SimulationSpace = SimulationSpace(3)
+        h.assert_eq[USize](36, sim3.returnNeighborSum(0))
+        h.assert_eq[USize](32, sim3.returnNeighborSum(4))
