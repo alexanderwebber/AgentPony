@@ -29,20 +29,20 @@ class SimulationSpace
         var neighborSum: USize = 0
 
         for (x, y) in neighborCoordinates.values() do
-            let neighbor: USize = calculateNeighbor(x, y, cellIndex)
+            let neighbor: USize = calculateNeighbor(x, y, cellIndex, _sideLength)
             
             neighborSum         = neighborSum + neighbor
         end
 
         neighborSum
 
-    fun calculateNeighbor(xCoordinate: ISize, yCoordinate: ISize, cellIndex: USize): USize =>
-        ((((cellIndex.isize() + xCoordinate) %% _sideLength.isize()) + (yCoordinate * _sideLength.isize())) %% (_sideLength * _sideLength).isize()).usize()
+    fun calculateNeighbor(xCoordinate: ISize, yCoordinate: ISize, cellIndex: USize, sideLength: USize): USize =>
+        ((((cellIndex.isize() + xCoordinate) %% sideLength.isize()) + (yCoordinate * sideLength.isize())) %% (sideLength * sideLength).isize()).usize()
 
     fun loadNeighbors() =>
         for cellIndex in Range(0, _numCells) do
             for (x, y) in neighborCoordinates.values() do
-                let neighbor: USize = calculateNeighbor(x, y, cellIndex)
+                let neighbor: USize = calculateNeighbor(x, y, cellIndex, _sideLength)
 
                 try _cells(cellIndex)?.setNeighbor(_cells(neighbor)?) end
             end
