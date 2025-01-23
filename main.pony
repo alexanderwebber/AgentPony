@@ -6,7 +6,7 @@ actor Main
         _out = env.out
 
         let simSideLength        = try env.args(2)?.usize()? else 5 end
-        let sim: SimulationSpace = SimulationSpace(simSideLength, _out)
+        let sim: SimulationSpace = SimulationSpace(simSideLength)
         sim.loadRandomPositions()
         sim.loadNeighbors()
         sim.updateCellStatuses()
