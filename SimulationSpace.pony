@@ -23,26 +23,6 @@ class SimulationSpace
             _cells.push(Cell(i, _rand.next() % 2))
         end
 
-    fun returnNeighborSum(cellIndex: USize): USize =>
-        var neighborSum: USize = 0
-
-        for (x, y) in neighborCoordinates.values() do
-            let neighbor: USize = calculateNeighbor(x, y, cellIndex, _sideLength)
-            
-            neighborSum         = neighborSum + neighbor
-        end
-
-        neighborSum
-
-    fun calculateNeighbor(xCoordinate: ISize, yCoordinate: ISize, cellIndex: USize, sideLength: USize): USize =>
-        let x:  ISize = (cellIndex % sideLength).isize()
-        let y:  ISize = (cellIndex / sideLength).isize()
-
-        let nx: ISize = (x + xCoordinate + sideLength.isize()) % sideLength.isize()
-        let ny: ISize = (y + yCoordinate + sideLength.isize()) % sideLength.isize()
-
-        (nx + (ny * sideLength.isize())).usize()
-
     fun loadNeighbors() =>
         for cellIndex in Range(0, _numCells) do
             for (x, y) in neighborCoordinates.values() do
@@ -53,6 +33,35 @@ class SimulationSpace
         end
 
     fun updateCellStatuses() =>
-        for cell in _cells.values() do 
+        for cell in _cells.values() do
+            cell.freezeNeighbors()
+        end
+
+        for cell in _cells.values() do
             cell.updateStatus()
         end
+
+    fun runGameOfLife(timeSteps: USize) =>
+        for i in Range(0, timeSteps) do 
+            updateCellStatuses()
+        end
+
+    fun calculateNeighbor(xCoordinate: ISize, yCoordinate: ISize, cellIndex: USize, sideLength: USize): USize =>
+        let x:  ISize = (cellIndex % sideLength).isize()
+        let y:  ISize = (cellIndex / sideLength).isize()
+
+        let nx: ISize = (x + xCoordinate + sideLength.isize()) % sideLength.isize()
+        let ny: ISize = (y + yCoordinate + sideLength.isize()) % sideLength.isize()
+
+        (nx + (ny * sideLength.isize())).usize()
+
+    fun returnNeighborSum(cellIndex: USize): USize =>
+        var neighborSum: USize = 0
+
+        for (x, y) in neighborCoordinates.values() do
+            let neighbor: USize = calculateNeighbor(x, y, cellIndex, _sideLength)
+            
+            neighborSum         = neighborSum + neighbor
+        end
+
+        neighborSum
