@@ -25,7 +25,7 @@ actor Cell
     be updateStatus() =>
         let neighborStatusPromises: Array[Promise[U64]] = Array[Promise[U64]](8)
 
-        for neighbor in _neighbors.values() do 
+        for neighbor in _frozenNeighbors.values() do 
             let p = Promise[U64]
             neighbor.getStatus(p)
             neighborStatusPromises.push(p)
