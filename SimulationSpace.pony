@@ -23,6 +23,16 @@ class SimulationSpace
             _cells.push(Cell(i, _rand.next() % 2))
         end
 
+    fun ref loadBlinker() =>
+        for i in Range(0, _numCells) do 
+            if (i == 7) or (i == 12) or (i == 17) then 
+                _cells.push(Cell(i, 1))
+                
+            else
+                _cells.push(Cell(i, 0))
+            end
+        end
+
     fun loadNeighbors() =>
         for cellIndex in Range(0, _numCells) do
             for (x, y) in neighborCoordinates.values() do
