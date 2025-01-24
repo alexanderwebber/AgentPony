@@ -1,9 +1,11 @@
 use "promises"
+use "collections"
 
 actor Cell
-    var _position:  USize
-    var _status:    U64 val
-    let _neighbors: Array[Cell] = Array[Cell](8)
+    var _position:        USize
+    var _status:          U64 val
+    let _neighbors:       Array[Cell] = Array[Cell](8)
+    let _frozenNeighbors: Array[Cell] = Array[Cell](8)
 
     new create(position': USize, initalStatus: U64 val) =>
         _position = position'
@@ -14,6 +16,11 @@ actor Cell
 
     be setNeighbor(neighbor: Cell) =>
         _neighbors.push(neighbor)
+
+    be freezeNeighbors() =>
+        for i in Range(0, _neighbors.size()) do 
+            try _frozenNeighbors.update(i, _neighbors(i)?)? end
+        end
 
     be updateStatus() =>
         let neighborStatusPromises: Array[Promise[U64]] = Array[Promise[U64]](8)
