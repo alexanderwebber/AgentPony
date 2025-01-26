@@ -6,14 +6,16 @@ class SimulationSpace
     let _sideLength:         USize val
     let _numCells:           USize val
     let _cells:              Array[Cell]
+    let _endCellsStates:     Array[Cell]
     let _rand:               Rand
     let neighborCoordinates: Array[(ISize, ISize)] = [(-1, -1); (0, -1); (1, -1); (-1, 0); (1, 0); (-1, 1); (0, 1); (1, 1)]
 
     new create(sideLength': USize) =>
-        _sideLength = recover val sideLength' end
-        _numCells   = _sideLength * _sideLength
-        _cells      = Array[Cell](_numCells)
-        _rand       = Rand
+        _sideLength       = recover val sideLength' end
+        _numCells         = _sideLength * _sideLength
+        _cells            = Array[Cell](_numCells)
+        _endCellsStates   = Array[Cell](_numCells)
+        _rand             = Rand
 
     fun getSideLength(): USize val =>
         _sideLength
@@ -55,6 +57,26 @@ class SimulationSpace
         for i in Range(0, timeSteps) do 
             updateCellStatuses()
         end
+
+    fun gatherCellStatus() =>
+        let cellStatePromises: Array[Promise[U64]] = Array[Promise[U64]](_numCells)
+
+        for cell in _cells.values() do
+            let p = Promise[U64]
+            cell.getStatus(p)
+            cellStatePromises.push(p)
+        end
+
+        Promises[U64].join(cellStatePromises.values())
+        .next[None](recover this~copyEndState() end)
+
+    fun copyEndState(cellStates: Array[U64] val) =>
+        for state in cellStates.values() do 
+            _endCellsStates.push(state)
+        end
+
+    fun getEndState() =>
+        _endCellsStates
 
     fun calculateNeighbor(xCoordinate: ISize, yCoordinate: ISize, cellIndex: USize, sideLength: USize): USize =>
         let x:  ISize = (cellIndex % sideLength).isize()
