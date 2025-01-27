@@ -1,12 +1,12 @@
 use "collections"
 use "Random"
 use "promises"
-
-class SimulationSpace
+ 
+class SimulationSpace 
     let _sideLength:         USize val
     let _numCells:           USize val
     let _cells:              Array[Cell]
-    let _endCellsStates:     Array[Cell]
+    let _endCellsStates:     Array[U64]
     let _rand:               Rand
     let neighborCoordinates: Array[(ISize, ISize)] = [(-1, -1); (0, -1); (1, -1); (-1, 0); (1, 0); (-1, 1); (0, 1); (1, 1)]
 
@@ -14,7 +14,7 @@ class SimulationSpace
         _sideLength       = recover val sideLength' end
         _numCells         = _sideLength * _sideLength
         _cells            = Array[Cell](_numCells)
-        _endCellsStates   = Array[Cell](_numCells)
+        _endCellsStates   = Array[U64](_numCells)
         _rand             = Rand
 
     fun getSideLength(): USize val =>
@@ -70,7 +70,7 @@ class SimulationSpace
         Promises[U64].join(cellStatePromises.values())
         .next[None](recover this~copyEndState() end)
 
-    fun copyEndState(cellStates: Array[U64] val) =>
+    fun ref copyEndState(cellStates: Array[U64]) =>
         for state in cellStates.values() do 
             _endCellsStates.push(state)
         end
