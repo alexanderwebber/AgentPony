@@ -9,9 +9,7 @@ actor Main
         let timeSteps            = try env.args(2)?.usize()? else 100    end
         let sim: SimulationSpace = SimulationSpace(simSideLength)
 
-        sim.loadRandomPositions()
-        sim.loadNeighbors()
-        sim.runGameOfLife(timeSteps)
+        sim.>loadRandomPositions().>loadNeighbors().>runGameOfLife(timeSteps)
 
-        _out.print("Side length of simulation space is: " + sim.getSideLength().string())
-        _out.print("There are " + (simSideLength * simSideLength).string() + " cells.")
+        // _out.print("Side length of simulation space is: " + sim.getSideLength().string())
+        // _out.print("There are " + (simSideLength * simSideLength).string() + " cells.")
