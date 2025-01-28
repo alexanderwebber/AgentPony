@@ -1,6 +1,7 @@
 use "collections"
 use "Random"
 use "promises"
+use "pony_test"
  
 actor SimulationSpace 
     let _sideLength:         USize val
@@ -44,6 +45,10 @@ actor SimulationSpace
             end
         end
 
+    be testNeighborIndices(topLeftSum: USize, middleSum: USize, h: TestHelper) =>
+        h.assert_eq[USize](topLeftSum, returnNeighborSum(0))
+        h.assert_eq[USize](middleSum, returnNeighborSum(12))
+
     be updateCellStatuses() =>
         for cell in _cells.values() do
             cell.freezeNeighbors()
@@ -74,6 +79,10 @@ actor SimulationSpace
         for state in cellStates.values() do 
             _endCellsStates.push(state)
         end
+
+    be testEndState(h: TestHelper) =>
+        h.assert_eq[USize](90, returnNeighborSum(0))
+        h.assert_eq[USize](96, returnNeighborSum(12))
 
     fun getEndState() =>
         _endCellsStates

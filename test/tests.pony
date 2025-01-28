@@ -16,9 +16,8 @@ class iso _TestLoadNeighbors is UnitTest
 
     fun apply(h: TestHelper) =>
         let sim5: SimulationSpace = SimulationSpace(5)
-        h.assert_eq[USize](90, sim5.returnNeighborSum(0))
-        h.assert_eq[USize](96, sim5.returnNeighborSum(12))
+        sim5.testNeighborIndices(90, 96, h)
 
         let sim3: SimulationSpace = SimulationSpace(3)
-        h.assert_eq[USize](36, sim3.returnNeighborSum(0))
-        h.assert_eq[USize](32, sim3.returnNeighborSum(4))
+        sim3.testNeighborIndices(36, 32, h)
+
