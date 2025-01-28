@@ -26,7 +26,7 @@ actor SimulationSpace
             _cells.push(Cell(i, _rand.next() % 2))
         end
 
-    be loadBlinker() =>
+    be loadBlinkerFive() =>
         for i in Range(0, _numCells) do 
             if (i == 7) or (i == 12) or (i == 17) then 
                 _cells.push(Cell(i, 1))
@@ -80,12 +80,29 @@ actor SimulationSpace
             _endCellsStates.push(state)
         end
 
-    be testEndState(h: TestHelper) =>
-        h.assert_eq[USize](90, returnNeighborSum(0))
-        h.assert_eq[USize](96, returnNeighborSum(12))
+    be testEndStateBlinkerFive(evenOdd: U8, h: TestHelper) =>
+        let correctStates: Array[U64] = Array[U64](_numCells)
 
-    fun getEndState() =>
-        _endCellsStates
+        if (evenOdd % 2) == 0 then 
+            for i in Range(0, _numCells) do 
+                if (i == 7) or (i == 12) or (i == 17) then 
+                    correctStates.push(1)
+                else
+                    correctStates.push(0)
+                end
+            end
+
+        else
+            for i in Range(0, _numCells) do 
+                if (i == 11) or (i == 12) or (i == 13) then 
+                    correctStates.push(1)
+                else
+                    correctStates.push(0)
+                end
+            end
+        end
+
+        h.assert_array_eq[U64](correctStates, _endCellsStates)
 
     fun calculateNeighbor(xCoordinate: ISize, yCoordinate: ISize, cellIndex: USize, sideLength: USize): USize =>
         let x:  ISize = (cellIndex % sideLength).isize()

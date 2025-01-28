@@ -10,6 +10,3 @@ actor Main
         let sim: SimulationSpace = SimulationSpace(simSideLength)
 
         sim.>loadRandomPositions().>loadNeighbors().>runGameOfLife(timeSteps)
-
-        // _out.print("Side length of simulation space is: " + sim.getSideLength().string())
-        // _out.print("There are " + (simSideLength * simSideLength).string() + " cells.")
