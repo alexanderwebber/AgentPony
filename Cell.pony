@@ -32,9 +32,9 @@ actor Cell
         end
 
         Promises[U64].join(neighborStatusPromises.values())
-        .next[None](recover this~receiveNeighborStatuses() end)
+        .next[None](recover this~calculateState() end)
 
-    be receiveNeighborStatuses(neighborStatuses: Array[U64] val) =>
+    be calculateState(neighborStatuses: Array[U64] val) =>
         var numLiveNeighbors: U64 = 0
 
         for status in neighborStatuses.values() do
