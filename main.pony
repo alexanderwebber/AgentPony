@@ -6,6 +6,6 @@ actor Main
 
         let simSideLength        = try env.args(1)?.usize()? else 5      end
         let timeSteps            = try env.args(2)?.usize()? else 100    end
-        let sim: SimulationSpace = SimulationSpace(simSideLength)
+        let sim: SimulationSpace = SimulationSpace(simSideLength, _out)
 
-        sim.>loadRandomPositions().>loadNeighbors().>runGameOfLife(timeSteps)
+        sim.>loadBlinkerFive().>loadNeighbors().>runGameOfLife(timeSteps)
