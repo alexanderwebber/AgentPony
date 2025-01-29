@@ -1,5 +1,4 @@
 actor Main
-
     let _out: OutStream
 
     new create(env: Env) =>

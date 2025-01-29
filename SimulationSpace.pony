@@ -18,9 +18,6 @@ actor SimulationSpace
         _endCellsStates   = Array[U64](_numCells)
         _rand             = Rand
 
-    fun getSideLength(): USize val =>
-        _sideLength
-
     be loadRandomPositions() =>
         for i in Range(0, _numCells) do 
             _cells.push(Cell(i, _rand.next() % 2))
@@ -44,10 +41,6 @@ actor SimulationSpace
                 try _cells(cellIndex)?.setNeighbor(_cells(neighbor)?) end
             end
         end
-
-    be testNeighborIndices(topLeftSum: USize, middleSum: USize, h: TestHelper) =>
-        h.assert_eq[USize](topLeftSum, returnNeighborSum(0))
-        h.assert_eq[USize](middleSum, returnNeighborSum(12))
 
     be updateCellStatuses() =>
         for cell in _cells.values() do
@@ -123,3 +116,7 @@ actor SimulationSpace
         end
 
         neighborSum
+
+    be testNeighborIndices(topLeftSum: USize, middleSum: USize, h: TestHelper) =>
+        h.assert_eq[USize](topLeftSum, returnNeighborSum(0))
+        h.assert_eq[USize](middleSum, returnNeighborSum(12))

@@ -48,5 +48,5 @@ actor Cell
         elseif (_status == 0) and (numLiveNeighbors == 3) then
             _status = 1
         else
-            _status = 0    
+            _status = 0
         end
