@@ -27,7 +27,7 @@ class iso _TestEndBlinker is UnitTest
 
     fun apply(h: TestHelper) =>
         let simEven: SimulationSpace = SimulationSpace(5)
-        simEven.>loadBlinkerFive().>loadNeighbors().>runGameOfLife(2).>gatherCellStatus().>testEndStateBlinkerFive(2, h)
+        simEven.>loadBlinkerFive().>loadNeighbors().>runGameOfLife(74).>gatherCellStatus().>testEndStateBlinkerFive(74, h)
 
         let simOdd: SimulationSpace = SimulationSpace(5)
-        simOdd.>loadBlinkerFive().>loadNeighbors().>runGameOfLife(3).>gatherCellStatus().>testEndStateBlinkerFive(3, h)
+        simOdd.>loadBlinkerFive().>loadNeighbors().>runGameOfLife(53).>gatherCellStatus().>testEndStateBlinkerFive(53, h)
