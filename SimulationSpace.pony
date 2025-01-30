@@ -85,18 +85,18 @@ actor SimulationSpace
         printBoard()
 
     fun printBoard() =>
-        var i: USize = 0
+        for i in Range(0, _cellStates.size()) do
+            let state = try _cellStates(i)? else _out.print("no value here yet") end
 
-        for state in _cellStates.values() do
-            if ((i %% (_sideLength - 1)) == 0) and (i != 0) then 
+            if ((i % (_sideLength)) == (_sideLength - 1)) and (i != 0) then 
                 _out.print(state.string())
             else
                 _out.write(state.string() + " ")
             end
-            
-            i = i + 1
-        end
 
+            // _out.print("\x1B[H\x1B[2J")
+        end
+        
         _out.print(" ")
 
     be testEndStateBlinkerFive(evenOdd: U8, h: TestHelper) =>
