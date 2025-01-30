@@ -22,15 +22,15 @@ actor SimulationSpace
 
     be loadRandomPositions() =>
         for i in Range(0, _numCells) do 
-            _cells.push(Cell(i, _rand.next() % 2))
+            _cells.push(Cell(i, _rand.next() % 2, _out))
         end
 
     be loadBlinkerFive() =>
         for i in Range(0, _numCells) do 
             if (i == 7) or (i == 12) or (i == 17) then 
-                _cells.push(Cell(i, 1))
+                _cells.push(Cell(i, 1, _out))
             else
-                _cells.push(Cell(i, 0))
+                _cells.push(Cell(i, 0, _out))
             end
         end
 
@@ -54,11 +54,11 @@ actor SimulationSpace
 
     be runGameOfLife(timeSteps: USize) =>
         for i in Range(0, timeSteps) do
-            gatherCellStatus()
+            gatherCellStatuses()
             updateCellStatuses()
         end
 
-    fun gatherCellStatus() =>
+    fun gatherCellStatuses() =>
         let cellStatePromises: Array[Promise[U64]] = Array[Promise[U64]](_numCells)
 
         for cell in _cells.values() do
@@ -78,10 +78,11 @@ actor SimulationSpace
                 try 
                     _cellStates.push(states(i)?)
                 else 
-                    _out.print("can't access cell states") 
+                    _out.print("can't access cell state at index " + i.string()) 
                 end 
             end
         end
+
         printBoard()
 
     fun printBoard() =>
