@@ -7,7 +7,7 @@ actor SimulationSpace
     let _sideLength:         USize val
     let _numCells:           USize val
     let _cells:              Array[Cell]
-    let _cellStates:         Array[U64]
+    let _cellStates:         Array[(U64, USize)]
     let _rand:               Rand
     let _out:                OutStream
     let neighborCoordinates: Array[(ISize, ISize)] = [(-1, -1); (0, -1); (1, -1); (-1, 0); (1, 0); (-1, 1); (0, 1); (1, 1)]
@@ -16,7 +16,7 @@ actor SimulationSpace
         _sideLength       = recover val sideLength' end
         _numCells         = _sideLength * _sideLength
         _cells            = Array[Cell](_numCells)
-        _cellStates       = Array[U64](_numCells)
+        _cellStates       = Array[(U64, USize)](_numCells)
         _rand             = Rand
         _out              = out'
 
@@ -73,58 +73,63 @@ actor SimulationSpace
     be copyState(states: Array[(U64, USize)] val) =>
         for i in Range(0, _numCells) do 
             try 
-                _cellStates.update(i, states(i)?._1)?
+                _cellStates.update(i, states(i)?)?
             else 
                 try 
-                    _cellStates.push(states(i)?._1)
+                    _cellStates.push(states(i)?)
                 else 
                     _out.print("can't access cell state at index " + i.string()) 
                 end 
             end
         end
 
+        let sortedArray: Array[(U64, USize)] = Sort[Array[(U64, USize)], (U64, USize)](_cellStates)
+
+        for state in _cellStates.values() do 
+            _out.print(state._2.string())
         
-
-        printBoard()
-
-    fun printBoard() =>
-        for i in Range(0, _cellStates.size()) do
-            let state = try _cellStates(i)? else _out.print("no value here yet") end
-
-            if ((i % (_sideLength)) == (_sideLength - 1)) and (i != 0) then 
-                _out.print(state.string())
-            else
-                _out.write(state.string() + " ")
-            end
-
-            // _out.print("\x1B[H\x1B[2J")
-        end
-        
-        _out.print(" ")
-
-    be testEndStateBlinkerFive(evenOdd: U8, h: TestHelper) =>
-        let correctStates: Array[U64] = Array[U64](_numCells)
-
-        if (evenOdd % 2) == 0 then 
-            for i in Range(0, _numCells) do 
-                if (i == 7) or (i == 12) or (i == 17) then 
-                    correctStates.push(1)
-                else
-                    correctStates.push(0)
-                end
-            end
-
-        else
-            for i in Range(0, _numCells) do 
-                if (i == 11) or (i == 12) or (i == 13) then 
-                    correctStates.push(1)
-                else
-                    correctStates.push(0)
-                end
-            end
         end
 
-        h.assert_array_eq[U64](correctStates, _cellStates)
+        // printBoard()
+
+    // fun printBoard() =>
+    //     for i in Range(0, _cellStates.size()) do
+    //         let state = try _cellStates(i)? else _out.print("no value here yet") end
+
+    //         if ((i % (_sideLength)) == (_sideLength - 1)) and (i != 0) then 
+    //             _out.print(state.string())
+    //         else
+    //             _out.write(state.string() + " ")
+    //         end
+
+    //         // _out.print("\x1B[H\x1B[2J")
+    //     end
+        
+    //     _out.print(" ")
+
+    // be testEndStateBlinkerFive(evenOdd: U8, h: TestHelper) =>
+    //     let correctStates: Array[U64] = Array[U64](_numCells)
+
+    //     if (evenOdd % 2) == 0 then 
+    //         for i in Range(0, _numCells) do 
+    //             if (i == 7) or (i == 12) or (i == 17) then 
+    //                 correctStates.push(1)
+    //             else
+    //                 correctStates.push(0)
+    //             end
+    //         end
+
+    //     else
+    //         for i in Range(0, _numCells) do 
+    //             if (i == 11) or (i == 12) or (i == 13) then 
+    //                 correctStates.push(1)
+    //             else
+    //                 correctStates.push(0)
+    //             end
+    //         end
+    //     end
+
+    //     h.assert_array_eq[U64](correctStates, _cellStates)
 
     fun calculateNeighbor(xCoordinate: ISize, yCoordinate: ISize, cellIndex: USize, sideLength: USize): USize =>
         let x:  ISize = (cellIndex % sideLength).isize()
