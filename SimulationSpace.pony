@@ -59,29 +59,31 @@ actor SimulationSpace
         end
 
     fun gatherCellStatuses() =>
-        let cellStatePromises: Array[Promise[U64]] = Array[Promise[U64]](_numCells)
+        let cellStatePromises: Array[Promise[(U64, USize)]] = Array[Promise[(U64, USize)]](_numCells)
 
         for cell in _cells.values() do
-            let p = Promise[U64]
-            cell.getStatus(p)
+            let p = Promise[(U64, USize)]
+            cell.getStatusAndPosition(p)
             cellStatePromises.push(p)
         end
 
-        Promises[U64].join(cellStatePromises.values())
+        Promises[(U64, USize)].join(cellStatePromises.values())
         .next[None](recover this~copyState() end)
 
-    be copyState(states: Array[U64] val) =>
+    be copyState(states: Array[(U64, USize)] val) =>
         for i in Range(0, _numCells) do 
             try 
-                _cellStates.update(i, states(i)?)?
+                _cellStates.update(i, states(i)?._1)?
             else 
                 try 
-                    _cellStates.push(states(i)?)
+                    _cellStates.push(states(i)?._1)
                 else 
                     _out.print("can't access cell state at index " + i.string()) 
                 end 
             end
         end
+
+        
 
         printBoard()
 

@@ -16,6 +16,9 @@ actor Cell
     be getStatus(p: Promise[U64]) =>
         p(_status)
 
+    be getStatusAndPosition(p: Promise[(U64, USize)]) =>
+        p((_status, _position))
+
     be printPosition() =>
         _out.print(_position.string())
 
