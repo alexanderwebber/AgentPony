@@ -8,7 +8,7 @@ actor SimulationSpace
     let _sideLength:         USize val
     let _numCells:           USize val
     let _cells:              Array[Cell]
-    let _cellStates:         Array[(U64, USize)]
+    var _cellStates:         Array[(U64, USize)]
     let _rand:               Rand
     let _out:                OutStream
     let neighborCoordinates: Array[(ISize, ISize)] = [(-1, -1); (0, -1); (1, -1); (-1, 0); (1, 0); (-1, 1); (0, 1); (1, 1)]
@@ -55,8 +55,7 @@ actor SimulationSpace
 
     be runGameOfLife(timeSteps: USize) =>
         for i in Range(0, timeSteps) do
-            gatherCellStatuses()
-            updateCellStatuses()
+            this.>gatherCellStatuses().>updateCellStatuses()
         end
 
     fun gatherCellStatuses() =>
@@ -72,6 +71,7 @@ actor SimulationSpace
         .next[None](recover this~copyState() end)
 
     be copyState(states: Array[(U64, USize)] val) =>
+        
         for i in Range(0, _numCells) do 
             try 
                 _cellStates.update(i, states(i)?)?
@@ -84,26 +84,23 @@ actor SimulationSpace
             end
         end
 
-        for state in SortTuple(_cellStates, _out).values() do 
-            _out.print(state._2.string())
+        _cellStates = SortTuple(_cellStates)
+        printBoard()
+
+    fun printBoard() =>
+        for i in Range(0, _cellStates.size()) do
+            let state = try _cellStates(i)?._1 else _out.print("no value here yet") end
+
+            if ((i % (_sideLength)) == (_sideLength - 1)) and (i != 0) then 
+                _out.print(state.string())
+            else
+                _out.write(state.string() + " ")
+            end
+
+            // _out.print("\x1B[H\x1B[2J")
         end
-
-        // printBoard()
-
-    // fun printBoard() =>
-    //     for i in Range(0, _cellStates.size()) do
-    //         let state = try _cellStates(i)? else _out.print("no value here yet") end
-
-    //         if ((i % (_sideLength)) == (_sideLength - 1)) and (i != 0) then 
-    //             _out.print(state.string())
-    //         else
-    //             _out.write(state.string() + " ")
-    //         end
-
-    //         // _out.print("\x1B[H\x1B[2J")
-    //     end
         
-    //     _out.print(" ")
+        _out.print(" ")
 
     // be testEndStateBlinkerFive(evenOdd: U8, h: TestHelper) =>
     //     let correctStates: Array[U64] = Array[U64](_numCells)

@@ -1,14 +1,7 @@
 primitive SortTuple
-    fun apply(a: Array[(U64, USize)], out: OutStream): Array[(U64, USize)]^ =>
-        for i in a.values() do 
-            out.print(i._2.string())
-        end
-        
+    fun apply(a: Array[(U64, USize)]): Array[(U64, USize)]^ =>
         try _quickSortTuple(a, 0, a.size().isize() - 1)? end
-
-        for i in a.values() do 
-            out.print(i._2.string())
-        end
+        
         a
 
         
