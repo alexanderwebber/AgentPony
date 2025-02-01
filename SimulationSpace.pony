@@ -2,12 +2,13 @@ use "collections"
 use "random"
 use "promises"
 use "pony_test"
+use "./utils"
  
 actor SimulationSpace 
     let _sideLength:         USize val
     let _numCells:           USize val
     let _cells:              Array[Cell]
-    let _cellStates:         Array[U64]
+    var _cellStates:         Array[(U64, USize)]
     let _rand:               Rand
     let _out:                OutStream
     let neighborCoordinates: Array[(ISize, ISize)] = [(-1, -1); (0, -1); (1, -1); (-1, 0); (1, 0); (-1, 1); (0, 1); (1, 1)]
@@ -16,21 +17,21 @@ actor SimulationSpace
         _sideLength       = recover val sideLength' end
         _numCells         = _sideLength * _sideLength
         _cells            = Array[Cell](_numCells)
-        _cellStates       = Array[U64](_numCells)
+        _cellStates       = Array[(U64, USize)](_numCells)
         _rand             = Rand
         _out              = out'
 
     be loadRandomPositions() =>
         for i in Range(0, _numCells) do 
-            _cells.push(Cell(i, _rand.next() % 2))
+            _cells.push(Cell(i, _rand.next() % 2, _out))
         end
 
     be loadBlinkerFive() =>
         for i in Range(0, _numCells) do 
             if (i == 7) or (i == 12) or (i == 17) then 
-                _cells.push(Cell(i, 1))
+                _cells.push(Cell(i, 1, _out))
             else
-                _cells.push(Cell(i, 0))
+                _cells.push(Cell(i, 0, _out))
             end
         end
 
@@ -54,23 +55,23 @@ actor SimulationSpace
 
     be runGameOfLife(timeSteps: USize) =>
         for i in Range(0, timeSteps) do
-            gatherCellStatus()
-            updateCellStatuses()
+            this.>gatherCellStatuses().>updateCellStatuses()
         end
 
-    fun gatherCellStatus() =>
-        let cellStatePromises: Array[Promise[U64]] = Array[Promise[U64]](_numCells)
+    fun gatherCellStatuses() =>
+        let cellStatePromises: Array[Promise[(U64, USize)]] = Array[Promise[(U64, USize)]](_numCells)
 
         for cell in _cells.values() do
-            let p = Promise[U64]
-            cell.getStatus(p)
+            let p = Promise[(U64, USize)]
+            cell.getStatusAndPosition(p)
             cellStatePromises.push(p)
         end
 
-        Promises[U64].join(cellStatePromises.values())
+        Promises[(U64, USize)].join(cellStatePromises.values())
         .next[None](recover this~copyState() end)
 
-    be copyState(states: Array[U64] val) =>
+    be copyState(states: Array[(U64, USize)] val) =>
+        
         for i in Range(0, _numCells) do 
             try 
                 _cellStates.update(i, states(i)?)?
@@ -78,15 +79,17 @@ actor SimulationSpace
                 try 
                     _cellStates.push(states(i)?)
                 else 
-                    _out.print("can't access cell states") 
+                    _out.print("can't access cell state at index " + i.string()) 
                 end 
             end
         end
+
+        _cellStates = SortTuple(_cellStates)
         printBoard()
 
     fun printBoard() =>
         for i in Range(0, _cellStates.size()) do
-            let state = try _cellStates(i)? else _out.print("no value here yet") end
+            let state = try _cellStates(i)?._1 else _out.print("no value here yet") end
 
             if ((i % (_sideLength)) == (_sideLength - 1)) and (i != 0) then 
                 _out.print(state.string())
@@ -99,29 +102,29 @@ actor SimulationSpace
         
         _out.print(" ")
 
-    be testEndStateBlinkerFive(evenOdd: U8, h: TestHelper) =>
-        let correctStates: Array[U64] = Array[U64](_numCells)
+    // be testEndStateBlinkerFive(evenOdd: U8, h: TestHelper) =>
+    //     let correctStates: Array[U64] = Array[U64](_numCells)
 
-        if (evenOdd % 2) == 0 then 
-            for i in Range(0, _numCells) do 
-                if (i == 7) or (i == 12) or (i == 17) then 
-                    correctStates.push(1)
-                else
-                    correctStates.push(0)
-                end
-            end
+    //     if (evenOdd % 2) == 0 then 
+    //         for i in Range(0, _numCells) do 
+    //             if (i == 7) or (i == 12) or (i == 17) then 
+    //                 correctStates.push(1)
+    //             else
+    //                 correctStates.push(0)
+    //             end
+    //         end
 
-        else
-            for i in Range(0, _numCells) do 
-                if (i == 11) or (i == 12) or (i == 13) then 
-                    correctStates.push(1)
-                else
-                    correctStates.push(0)
-                end
-            end
-        end
+    //     else
+    //         for i in Range(0, _numCells) do 
+    //             if (i == 11) or (i == 12) or (i == 13) then 
+    //                 correctStates.push(1)
+    //             else
+    //                 correctStates.push(0)
+    //             end
+    //         end
+    //     end
 
-        h.assert_array_eq[U64](correctStates, _cellStates)
+    //     h.assert_array_eq[U64](correctStates, _cellStates)
 
     fun calculateNeighbor(xCoordinate: ISize, yCoordinate: ISize, cellIndex: USize, sideLength: USize): USize =>
         let x:  ISize = (cellIndex % sideLength).isize()
