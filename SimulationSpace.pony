@@ -2,6 +2,7 @@ use "collections"
 use "random"
 use "promises"
 use "pony_test"
+use "./utils"
  
 actor SimulationSpace 
     let _sideLength:         USize val
@@ -83,11 +84,8 @@ actor SimulationSpace
             end
         end
 
-        let sortedArray: Array[(U64, USize)] = Sort[Array[(U64, USize)], (U64, USize)](_cellStates)
-
-        for state in _cellStates.values() do 
+        for state in SortTuple(_cellStates, _out).values() do 
             _out.print(state._2.string())
-        
         end
 
         // printBoard()
