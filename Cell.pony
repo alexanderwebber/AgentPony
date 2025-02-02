@@ -19,8 +19,8 @@ actor Cell
     be getStatusAndPosition(p: Promise[(U64, USize)]) =>
         p((_status, _position))
 
-    be printPosition() =>
-        _out.print(_position.string())
+    be printStatusAndPosition() =>
+        _out.print("status: " + _status.string() + " pos:" + _position.string())
 
     be setNeighbor(neighbor: Cell) =>
         _neighbors.push(neighbor)
