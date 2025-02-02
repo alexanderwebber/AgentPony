@@ -29,8 +29,8 @@ class iso _TestEndBlinker is UnitTest
     fun name(): String => "test end state for blinker start seed"
 
     fun apply(h: TestHelper) =>
-        let simEven: SimulationSpace = SimulationSpace(5, _out)
+        let simEven: SimulationSpace = SimulationSpace(5, out)
         simEven.>loadBlinkerFive().>loadNeighbors().>runGameOfLife(74).>gatherCellStatus().>testEndStateBlinkerFive(74, h)
 
-        let simOdd: SimulationSpace = SimulationSpace(5, _out)
+        let simOdd: SimulationSpace = SimulationSpace(5, out)
         simOdd.>loadBlinkerFive().>loadNeighbors().>runGameOfLife(53).>gatherCellStatus().>testEndStateBlinkerFive(53, h)
