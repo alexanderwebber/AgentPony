@@ -2,19 +2,6 @@ use "../../AgentPony"
 use "collections"
 
 primitive NeighborFunctions
-    fun printBoard(cellStates: Array[(U64, USize)], out: OutStream, sideLength: USize) =>
-        for i in Range(0, cellStates.size()) do
-            let state = try cellStates(i)?._1 else out.print("no value here yet") end
-
-            if ((i % (sideLength)) == (sideLength - 1)) and (i != 0) then 
-                out.print(state.string())
-            else
-                out.write(state.string() + " ")
-            end
-        end
-
-        out.print(" ")
-
     fun calculateNeighbor(xCoordinate: ISize, yCoordinate: ISize, cellIndex: USize, sideLength: USize): USize =>
         let x:  ISize = (cellIndex % sideLength).isize()
         let y:  ISize = (cellIndex / sideLength).isize()

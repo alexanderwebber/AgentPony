@@ -4,14 +4,12 @@ use "collections"
 actor Cell
     var _position:        USize
     var _status:          U64 val
-    let _out:             OutStream
     let _neighbors:       Array[Cell] = Array[Cell](8)
     let _frozenNeighbors: Array[Cell] = Array[Cell](8)
 
-    new create(position': USize, initalStatus: U64 val, out': OutStream) =>
+    new create(position': USize, initalStatus: U64 val) =>
         _position = position'
         _status   = initalStatus
-        _out      = out'
 
     be getStatus(p: Promise[U64]) =>
         p(_status)
@@ -19,8 +17,8 @@ actor Cell
     be getStatusAndPosition(p: Promise[(U64, USize)]) =>
         p((_status, _position))
 
-    be printStatusAndPosition() =>
-        _out.print("status: " + _status.string() + " pos:" + _position.string())
+    be printStatus(out: OutStream) =>
+        out.print(_status.string())
 
     be setNeighbor(neighbor: Cell) =>
         _neighbors.push(neighbor)
