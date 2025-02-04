@@ -4,31 +4,28 @@ use "collections"
 actor Cell
     var _position:        USize
     var _status:          U64 val
+    let _out:             OutStream
     let _neighbors:       Array[Cell] = Array[Cell](8)
     let _frozenNeighbors: Array[Cell] = Array[Cell](8)
 
-    new create(position': USize, initalStatus: U64 val) =>
+    new create(position': USize, initalStatus: U64 val, out': OutStream) =>
         _position = position'
         _status   = initalStatus
+        _out      = out'
 
     be getStatus(p: Promise[U64]) =>
         p(_status)
 
-    be getStatusAndPosition(p: Promise[(U64, USize)]) =>
-        p((_status, _position))
-
-    be printStatus(out: OutStream) =>
-        out.print(_status.string())
-
     be setNeighbor(neighbor: Cell) =>
         _neighbors.push(neighbor)
 
-    be freezeNeighbors() =>
+    be freezeNeighbors(p: Promise[U64]) =>
         for i in Range(0, _neighbors.size()) do 
             try _frozenNeighbors.update(i, _neighbors(i)?)? end
         end
+        p(_status)
 
-    be updateStatus() =>
+    be updateStatus(pr: Promise[(U64, USize)]) =>
         let neighborStatusPromises: Array[Promise[U64]] = Array[Promise[U64]](8)
 
         for neighbor in _frozenNeighbors.values() do 
@@ -39,6 +36,8 @@ actor Cell
 
         Promises[U64].join(neighborStatusPromises.values())
         .next[None](recover this~calculateState() end)
+
+        pr((_status, _position))
 
     be calculateState(neighborStatuses: Array[U64] val) =>
         var numLiveNeighbors: U64 = 0
