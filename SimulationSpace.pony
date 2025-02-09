@@ -36,6 +36,8 @@ actor SimulationSpace
                 _cellStates.push((0, i.usize()))
             end
         end
+
+        _out.print("\nStarting simulation: \n")
         printBoard()
 
     be loadNeighbors() =>
