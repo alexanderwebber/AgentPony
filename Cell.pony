@@ -21,8 +21,15 @@ actor Cell
 
     be freezeNeighbors(p: Promise[U64]) =>
         for i in Range(0, _neighbors.size()) do 
-            try _frozenNeighbors.update(i, _neighbors(i)?)? end
+            try 
+                _frozenNeighbors.update(i, _neighbors(i)?)?
+            else 
+                try 
+                    _frozenNeighbors.push(_neighbors(i)?)
+                end
+            end     
         end
+
         p(_status)
 
     be updateStatus(pr: Promise[(U64, USize)]) =>
@@ -39,8 +46,8 @@ actor Cell
 
     be calculateState(neighborStatuses: Array[U64] val, p: Promise[(U64, USize)]) =>
         var numLiveNeighbors: U64 = 0
-
         for status in neighborStatuses.values() do
+            
             if status == 1 then
                 numLiveNeighbors = numLiveNeighbors + 1
             end
