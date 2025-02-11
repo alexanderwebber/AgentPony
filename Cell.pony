@@ -3,12 +3,12 @@ use "collections"
 
 actor Cell
     var _position:        USize
-    var _status:          U64 val
+    var _status:          U64
     let _out:             OutStream
     let _neighbors:       Array[Cell] = Array[Cell](8)
     let _frozenNeighbors: Array[U64]  = Array[U64](8)
 
-    new create(position': USize, status': U64 val, out': OutStream) =>
+    new create(position': USize, status': U64, out': OutStream) =>
         _position = position'
         _status   = status'
         _out      = out'
@@ -33,7 +33,7 @@ actor Cell
         .next[None](recover this~updateFrozenStatuses(where p = pr) end)
 
     be updateFrozenStatuses(frozenNeighborStatuses: Array[U64] val, p: Promise[U64]) =>
-        for i in Range(0, _neighbors.size()) do 
+        for i in Range(0, frozenNeighborStatuses.size()) do 
             try 
                 _frozenNeighbors.update(i, frozenNeighborStatuses(i)?)?
             else 
@@ -51,6 +51,7 @@ actor Cell
         for status in _frozenNeighbors.values() do
             if status == 1 then
                 numLiveNeighbors = numLiveNeighbors + 1
+                _out.print(_status.string() + " " + _position.string() + " " + numLiveNeighbors.string())
             end
         end
 

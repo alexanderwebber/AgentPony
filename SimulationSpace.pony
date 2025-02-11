@@ -114,10 +114,8 @@ actor SimulationSpace
         end
 
         _cellStates = SortTuple(_cellStates)
-
-        printBoard()
         
-    be printBoard() =>
+    fun printBoard() =>
         for i in Range(0, _cellStates.size()) do
             let state = try _cellStates(i)?._1 else _out.print("no value here yet") end
 

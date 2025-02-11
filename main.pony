@@ -5,7 +5,7 @@ actor Main
         _out = env.out
 
         let simSideLength        = try env.args(1)?.usize()? else 5      end
-        let timeSteps            = try env.args(2)?.usize()? else 4      end
+        let timeSteps            = try env.args(2)?.usize()? else 3      end
         let sim: SimulationSpace = SimulationSpace(simSideLength, _out)
 
         sim.>loadBlinkerFive().>loadNeighborsAndRun(timeSteps)
