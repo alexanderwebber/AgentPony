@@ -6,48 +6,49 @@ actor Cell
     var _status:          U64 val
     let _out:             OutStream
     let _neighbors:       Array[Cell] = Array[Cell](8)
-    let _frozenNeighbors: Array[Cell] = Array[Cell](8)
+    let _frozenNeighbors: Array[U64]  = Array[U64](8)
 
-    new create(position': USize, initalStatus: U64 val, out': OutStream) =>
+    new create(position': USize, status': U64 val, out': OutStream) =>
         _position = position'
-        _status   = initalStatus
+        _status   = status'
         _out      = out'
 
     be getStatus(p: Promise[U64]) =>
         p(_status)
 
-    be setNeighbor(neighbor: Cell) =>
+    be setNeighbor(neighbor: Cell, p: Promise[USize]) =>
         _neighbors.push(neighbor)
+        p(_position)
 
-    be freezeNeighbors(p: Promise[U64]) =>
-        for i in Range(0, _neighbors.size()) do 
-            try 
-                _frozenNeighbors.update(i, _neighbors(i)?)?
-            else 
-                try 
-                    _frozenNeighbors.push(_neighbors(i)?)
-                end
-            end     
-        end
-
-        p(_status)
-
-    be updateStatus(pr: Promise[(U64, USize)]) =>
+    be freezeNeighbors(pr: Promise[U64]) =>
         let neighborStatusPromises: Array[Promise[U64]] = Array[Promise[U64]](8)
 
-        for neighbor in _frozenNeighbors.values() do 
+        for neighbor in _neighbors.values() do 
             let p = Promise[U64]
             neighbor.getStatus(p)
             neighborStatusPromises.push(p)
         end
 
         Promises[U64].join(neighborStatusPromises.values())
-        .next[None](recover this~calculateState(where p = pr) end)
+        .next[None](recover this~updateFrozenStatuses(where p = pr) end)
 
-    be calculateState(neighborStatuses: Array[U64] val, p: Promise[(U64, USize)]) =>
+    be updateFrozenStatuses(frozenNeighborStatuses: Array[U64] val, p: Promise[U64]) =>
+        for i in Range(0, _neighbors.size()) do 
+            try 
+                _frozenNeighbors.update(i, frozenNeighborStatuses(i)?)?
+            else 
+                try 
+                    _frozenNeighbors.push(frozenNeighborStatuses(i)?)
+                end
+            end     
+        end
+
+        p(_status)
+
+    be updateStatus(p: Promise[(U64, USize)]) =>
         var numLiveNeighbors: U64 = 0
-        for status in neighborStatuses.values() do
-            
+
+        for status in _frozenNeighbors.values() do
             if status == 1 then
                 numLiveNeighbors = numLiveNeighbors + 1
             end

@@ -26,6 +26,9 @@ actor SimulationSpace
             _cells.push(Cell(i, _rand.next() % 2, _out))
         end
 
+        _out.print("\nStarting simulation: \n")
+        printBoard()
+
     be loadBlinkerFive() =>
         for i in Range(0, _numCells) do 
             if (i == 7) or (i == 12) or (i == 17) then 
@@ -40,16 +43,25 @@ actor SimulationSpace
         _out.print("\nStarting simulation: \n")
         printBoard()
 
-    be loadNeighbors() =>
+    be loadNeighborsAndRun(timeSteps: USize) =>
+        let cellPositionPromises: Array[Promise[USize]] = Array[Promise[USize]](_numCells)
+
         for cellIndex in Range(0, _numCells) do
             for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
-                let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, cellIndex, _sideLength)
+                let p = Promise[USize]
 
-                try _cells(cellIndex)?.setNeighbor(_cells(neighbor)?) end
+                let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, cellIndex, _sideLength)
+                try _cells(cellIndex)?.setNeighbor(_cells(neighbor)?, p) end
+
+                cellPositionPromises.push(p)
             end
         end
 
-    be runGameOfLife(timeSteps: USize) =>
+        Promises[USize].join(cellPositionPromises.values())
+        .next[None](recover this~runGameOfLife(where timeSteps = timeSteps) end)
+
+
+    be runGameOfLife(cellPositions: Array[USize] val, timeSteps: USize) =>
         for i in Range(0, timeSteps) do
             simulationStep()
         end
@@ -104,8 +116,8 @@ actor SimulationSpace
         _cellStates = SortTuple(_cellStates)
 
         printBoard()
-
-    fun printBoard() =>
+        
+    be printBoard() =>
         for i in Range(0, _cellStates.size()) do
             let state = try _cellStates(i)?._1 else _out.print("no value here yet") end
 
