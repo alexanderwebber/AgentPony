@@ -36,8 +36,8 @@ actor Cell
         for i in Range(0, frozenNeighborStatuses.size()) do 
             try 
                 _frozenNeighbors.update(i, frozenNeighborStatuses(i)?)?
-            else 
-                try 
+            else
+                try
                     _frozenNeighbors.push(frozenNeighborStatuses(i)?)
                 end
             end     
@@ -51,7 +51,6 @@ actor Cell
         for status in _frozenNeighbors.values() do
             if status == 1 then
                 numLiveNeighbors = numLiveNeighbors + 1
-                _out.print(_status.string() + " " + _position.string() + " " + numLiveNeighbors.string())
             end
         end
 

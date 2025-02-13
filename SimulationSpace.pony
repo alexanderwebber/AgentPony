@@ -66,19 +66,10 @@ actor SimulationSpace
             simulationStep()
         end
 
-    be simulationStep() =>
-        let cellStatePromises: Array[Promise[U64]] = Array[Promise[U64]](_numCells)
+    fun simulationStep() =>
+        this.>freezeCellStatuses()
 
-        for cell in _cells.values() do
-            let p = Promise[U64]
-            cell.getStatus(p)
-            cellStatePromises.push(p)
-        end
-
-        Promises[U64].join(cellStatePromises.values())
-        .next[None](recover this~freezeCellStatuses() end)
-
-    be freezeCellStatuses(states: Array[U64] val) =>
+    fun freezeCellStatuses() =>
         let cellFreezePromises: Array[Promise[U64]] = Array[Promise[U64]](_numCells)
 
         for cell in _cells.values() do
@@ -90,7 +81,7 @@ actor SimulationSpace
         Promises[U64].join(cellFreezePromises.values())
         .next[None](recover this~updateCellStatuses() end)
 
-    be updateCellStatuses(freezePromises: Array[U64] val) =>
+    be updateCellStatuses(statuses: Array[U64] val) =>
         let cellUpdatePromises: Array[Promise[(U64, USize)]] = Array[Promise[(U64, USize)]](_numCells)
 
         for cell in _cells.values() do
@@ -104,7 +95,7 @@ actor SimulationSpace
 
     be copyPrint(states: Array[(U64, USize)] val) =>
         for i in Range(0, _numCells) do 
-            try 
+            try
                 _cellStates.update(i, states(i)?)?
             else 
                 try 
@@ -114,8 +105,10 @@ actor SimulationSpace
         end
 
         _cellStates = SortTuple(_cellStates)
+
+        printBoard()
         
-    fun printBoard() =>
+    be printBoard() =>
         for i in Range(0, _cellStates.size()) do
             let state = try _cellStates(i)?._1 else _out.print("no value here yet") end
 
