@@ -5,54 +5,23 @@ actor Cell
     var _position:        USize
     var _status:          U64
     let _out:             OutStream
-    let _neighbors:       Array[Cell] = Array[Cell](8)
-    let _frozenNeighbors: Array[U64]  = Array[U64](8)
 
     new create(position': USize, status': U64, out': OutStream) =>
         _position = position'
         _status   = status'
         _out      = out'
 
-    be getStatus(p: Promise[U64]) =>
-        p(_status)
+    be sendStatusPosition(sim: SimulationSpace) =>
+        let sendableStatus:   U64   = recover val _status   end
+        let sendablePosition: USize = recover val _position end
 
-    be setNeighbor(neighbor: Cell, p: Promise[USize]) =>
-        _neighbors.push(neighbor)
-        p(_position)
+        sim.receiveStatusPosition(sendableStatus, sendablePosition)
 
-    be sendStatus(sim: SimulationSpace) =>
-        let sendableStatus: U64 = recover val _status end
-        sim.receiveStatus(sendableStatus)
-
-    be freezeNeighbors(pr: Promise[U64]) =>
-        let neighborStatusPromises: Array[Promise[U64]] = Array[Promise[U64]](8)
-
-        for neighbor in _neighbors.values() do 
-            let p = Promise[U64]
-            neighbor.getStatus(p)
-            neighborStatusPromises.push(p)
-        end
-
-        Promises[U64].join(neighborStatusPromises.values())
-        .next[None](recover this~updateFrozenStatuses(where p = pr) end)
-
-    be updateFrozenStatuses(frozenNeighborStatuses: Array[U64] val, p: Promise[U64]) =>
-        for i in Range(0, frozenNeighborStatuses.size()) do 
-            try 
-                _frozenNeighbors.update(i, frozenNeighborStatuses(i)?)?
-            else
-                try
-                    _frozenNeighbors.push(frozenNeighborStatuses(i)?)
-                end
-            end     
-        end
-
-        p(_status)
-
-    be updateStatus(p: Promise[(U64, USize)]) =>
+    be updateStatus(neighborStatuses: Array[U64] iso) =>
+        let statuses: Array[U64] box = consume neighborStatuses
         var numLiveNeighbors: U64 = 0
 
-        for status in _frozenNeighbors.values() do
+        for status in statuses.values() do
             if status == 1 then
                 numLiveNeighbors = numLiveNeighbors + 1
             end
@@ -65,5 +34,3 @@ actor Cell
         else
             _status = 0
         end
-
-        p((_status, _position))

@@ -6,20 +6,24 @@ use "./utils"
 use "./test"
  
 actor SimulationSpace 
-    let _sideLength:         USize val
-    let _numCells:           USize val
-    let _cells:              Array[Cell]
-    var _cellStates:         Array[(U64, USize)]
-    let _rand:               Rand
-    let _out:                OutStream
+    let _sideLength:   USize val
+    let _numCells:     USize val
+    let _timeSteps:    USize val
+    let _cells:        Array[Cell]
+    var _cellStates:   Array[U64]
+    var _statesOutput: Array[U64]
+    let _rand:         Rand
+    let _out:          OutStream
 
-    new create(sideLength': USize, out': OutStream) =>
-        _sideLength = recover val sideLength' end
-        _numCells   = _sideLength * _sideLength
-        _cells      = Array[Cell](_numCells)
-        _cellStates = Array[(U64, USize)](_numCells)
-        _rand       = Rand
-        _out        = out'
+    new create(sideLength': USize, out': OutStream, timeSteps': USize) =>
+        _sideLength   = recover val sideLength' end
+        _numCells     = _sideLength * _sideLength
+        _timeSteps    = timeSteps'
+        _cells        = Array[Cell](_numCells)
+        _cellStates   = Array[U64](_numCells)
+        _statesOutput = Array[U64](_timeSteps)
+        _rand         = Rand
+        _out          = out'
 
     be loadRandomPositions() =>
         for i in Range(0, _numCells) do 
@@ -33,78 +37,50 @@ actor SimulationSpace
         for i in Range(0, _numCells) do 
             if (i == 7) or (i == 12) or (i == 17) then 
                 _cells.push(Cell(i, 1, _out))
-                _cellStates.push((1, i.usize()))
+                _cellStates.push(1)
             else
                 _cells.push(Cell(i, 0, _out))
-                _cellStates.push((0, i.usize()))
+                _cellStates.push(0)
             end
         end
 
         _out.print("\nStarting simulation: \n")
         printBoard()
 
-    be loadNeighborsAndRun(timeSteps: USize) =>
-        let cellPositionPromises: Array[Promise[USize]] = Array[Promise[USize]](_numCells)
-
-        for cellIndex in Range(0, _numCells) do
-            for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
-                let p = Promise[USize]
-
-                let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, cellIndex, _sideLength)
-                try _cells(cellIndex)?.setNeighbor(_cells(neighbor)?, p) end
-
-                cellPositionPromises.push(p)
-            end
+    be runGameOfLife() =>
+        for i in Range(0, _timeSteps) do
+            updateCellStatuses()
+            try updateCells()? end
         end
-
-        Promises[USize].join(cellPositionPromises.values())
-        .next[None](recover this~runGameOfLife(where timeSteps = timeSteps) end)
-
-
-    be runGameOfLife(cellPositions: Array[USize] val, timeSteps: USize) =>
-        for i in Range(0, timeSteps) do
-            simulationStep()
-        end
-
-    fun simulationStep() =>
-        for cell in _cells.values() do 
-            cell.sendStatus(this)
         
+    fun updateCellStatuses() =>
+        for cell in _cells.values() do 
+            cell.sendStatusPosition(this)
         end
 
-    be receiveStatus(status: U64) =>
-        _out.print(status.string())
+        // add current cellstates to some output cache for printing
 
-    be updateCellStatuses(statuses: Array[U64] val) =>
-        let cellUpdatePromises: Array[Promise[(U64, USize)]] = Array[Promise[(U64, USize)]](_numCells)
+    fun updateCells()? =>
+        for cellIndex in Range(0, _cells.size()) do
+            let cellNeighborStatuses: Array[U64] iso = Array[U64](8)
 
-        for cell in _cells.values() do
-            let p = Promise[(U64, USize)]
-            cell.updateStatus(p)
-            cellUpdatePromises.push(p)
-        end
+            for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
+                let neighbor:       USize = NeighborFunctions.calculateNeighbor(x, y, cellIndex, _sideLength)
+                let neighborStatus: U64   = _cellStates(neighbor)?
 
-        Promises[(U64, USize)].join(cellUpdatePromises.values())
-        .next[None](recover this~copyPrint() end)
-
-    be copyPrint(states: Array[(U64, USize)] val) =>
-        for i in Range(0, _numCells) do 
-            try
-                _cellStates.update(i, states(i)?)?
-            else 
-                try 
-                    _cellStates.push(states(i)?)
-                end
+                cellNeighborStatuses.push(neighborStatus)
             end
+
+            _cells(cellIndex)?.updateStatus(consume cellNeighborStatuses)
+            
         end
 
-        _cellStates = SortTuple(_cellStates)
-
-        printBoard()
+    be receiveStatusPosition(status: U64, position: USize) =>
+        try _cellStates.update(position, status)? else _out.print("no cell at this index") end
         
     be printBoard() =>
         for i in Range(0, _cellStates.size()) do
-            let state = try _cellStates(i)?._1 else _out.print("no value here yet") end
+            let state = try _cellStates(i)? else _out.print("no value here yet") end
 
             if ((i % (_sideLength)) == (_sideLength - 1)) and (i != 0) then 
                 _out.print(state.string())
@@ -124,7 +100,7 @@ actor SimulationSpace
             let cellOnlyStates: Array[U64] = Array[U64](_numCells)
             
             for i in Range(0, _numCells) do 
-                try cellOnlyStates(i)? = _cellStates(i)?._1 end
+                try cellOnlyStates(i)? = _cellStates(i)? end
             end
 
             if (evenOdd % 2) == 0 then 
