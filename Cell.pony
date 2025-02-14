@@ -20,6 +20,10 @@ actor Cell
         _neighbors.push(neighbor)
         p(_position)
 
+    be sendStatus(sim: SimulationSpace) =>
+        let sendableStatus: U64 = recover val _status end
+        sim.receiveStatus(sendableStatus)
+
     be freezeNeighbors(pr: Promise[U64]) =>
         let neighborStatusPromises: Array[Promise[U64]] = Array[Promise[U64]](8)
 

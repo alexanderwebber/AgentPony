@@ -67,19 +67,13 @@ actor SimulationSpace
         end
 
     fun simulationStep() =>
-        this.>freezeCellStatuses()
-
-    fun freezeCellStatuses() =>
-        let cellFreezePromises: Array[Promise[U64]] = Array[Promise[U64]](_numCells)
-
-        for cell in _cells.values() do
-            let p = Promise[(U64)]
-            cell.freezeNeighbors(p)
-            cellFreezePromises.push(p)
+        for cell in _cells.values() do 
+            cell.sendStatus(this)
+        
         end
 
-        Promises[U64].join(cellFreezePromises.values())
-        .next[None](recover this~updateCellStatuses() end)
+    be receiveStatus(status: U64) =>
+        _out.print(status.string())
 
     be updateCellStatuses(statuses: Array[U64] val) =>
         let cellUpdatePromises: Array[Promise[(U64, USize)]] = Array[Promise[(U64, USize)]](_numCells)
