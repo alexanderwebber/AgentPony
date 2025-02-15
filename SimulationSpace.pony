@@ -31,7 +31,6 @@ actor SimulationSpace
         end
 
         _out.print("\nStarting simulation: \n")
-        printBoard()
 
     be loadBlinkerFive() =>
         for i in Range(0, _numCells) do 
@@ -53,12 +52,12 @@ actor SimulationSpace
             try updateCells()? end
         end
         
+    // probably need to make this one file, behaviors are hard to synchronize
     fun updateCellStatuses() =>
         for cell in _cells.values() do 
-            cell.sendStatusPosition(this)
+            let p = Promise[U64]
+            cell.sendStatusPosition(this, p)
         end
-
-        // add current cellstates to some output cache for printing
 
     fun updateCells()? =>
         for cellIndex in Range(0, _cells.size()) do
@@ -78,7 +77,7 @@ actor SimulationSpace
     be receiveStatusPosition(status: U64, position: USize) =>
         try _cellStates.update(position, status)? else _out.print("no cell at this index") end
         
-    be printBoard() =>
+    fun printBoard() =>
         for i in Range(0, _cellStates.size()) do
             let state = try _cellStates(i)? else _out.print("no value here yet") end
 
