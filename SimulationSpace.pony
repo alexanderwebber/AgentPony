@@ -49,15 +49,16 @@ actor SimulationSpace
     be runGameOfLife() =>
         for i in Range(0, _timeSteps) do
             updateCellStatuses()
-            try updateCells()? end
         end
         
     // probably need to make this one file, behaviors are hard to synchronize
     fun updateCellStatuses() =>
-        for cell in _cells.values() do 
-            let p = Promise[U64]
-            cell.sendStatusPosition(this, p)
+        let 
+        for cell in _cells.values() do
+            cell.sendStatusPosition(this)
         end
+
+        try updateCells()? end
 
     fun updateCells()? =>
         for cellIndex in Range(0, _cells.size()) do
@@ -73,6 +74,8 @@ actor SimulationSpace
             _cells(cellIndex)?.updateStatus(consume cellNeighborStatuses)
             
         end
+
+        //printBoard()
 
     be receiveStatusPosition(status: U64, position: USize) =>
         try _cellStates.update(position, status)? else _out.print("no cell at this index") end

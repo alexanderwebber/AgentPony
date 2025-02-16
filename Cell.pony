@@ -11,13 +11,11 @@ actor Cell
         _status   = status'
         _out      = out'
 
-    be sendStatusPosition(sim: SimulationSpace, p: Promise[U64]) =>
+    be sendStatusPosition(sim: SimulationSpace) =>
         let sendableStatus:   U64   = recover val _status   end
         let sendablePosition: USize = recover val _position end
 
         sim.receiveStatusPosition(sendableStatus, sendablePosition)
-
-        p(_status)
 
     be updateStatus(neighborStatuses: Array[U64] iso) =>
         let statuses: Array[U64] box = consume neighborStatuses
