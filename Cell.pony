@@ -2,9 +2,9 @@ use "promises"
 use "collections"
 
 actor Cell
-    var _position:        USize
-    var _status:          U64
-    let _out:             OutStream
+    var _position: USize
+    var _status:   U64
+    let _out:      OutStream
 
     new create(position': USize, status': U64, out': OutStream) =>
         _position = position'
@@ -17,9 +17,9 @@ actor Cell
 
         sim.receiveStatusPosition(sendableStatus, sendablePosition)
 
-    be updateStatus(neighborStatuses: Array[U64] iso) =>
+    be updateStatus(neighborStatuses: Array[U64] iso, monitor: Monitor) =>
         let statuses: Array[U64] box = consume neighborStatuses
-        var numLiveNeighbors: U64 = 0
+        var numLiveNeighbors: U64    = 0
 
         for status in statuses.values() do
             if status == 1 then
@@ -34,3 +34,5 @@ actor Cell
         else
             _status = 0
         end
+
+        monitor.incrementCellCounter()
