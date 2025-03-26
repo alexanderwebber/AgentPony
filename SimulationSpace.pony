@@ -60,13 +60,12 @@ actor SimulationSpace
             let cellNeighborStatuses: Array[U64] iso = Array[U64](8)
 
             for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
-                let neighbor:       USize = NeighborFunctions.calculateNeighbor(x, y, cellIndex, _sideLength)
+                let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, cellIndex, _sideLength)
                 try 
-                    let neighborStatus: U64   = _cellStates(neighbor)? 
+                    let neighborStatus: U64 = _cellStates(neighbor)? 
                 
                     cellNeighborStatuses.push(neighborStatus)
                 end
-
                 
             end
 
@@ -74,19 +73,15 @@ actor SimulationSpace
             
         end
 
-        printBoard()
+    be updateCellStates() =>
+        for cell in _cells.values() do 
+            cell.sendStatusPosition(this)
+        end
 
     be receiveStatusPosition(status: U64, position: USize) =>
         try _cellStates.update(position, status)? else _out.print("no cell at this index") end
-        
-    be epochFinishedNotification() =>
-        _epochFinished = true
-        _out.print("made it to epoch finished")
 
-    be simulationFinishedNotification() =>
-        _simulationFinished = true
-
-    fun printBoard() =>
+    be printBoard() =>
         for i in Range(0, _cellStates.size()) do
             let state = try _cellStates(i)? else _out.print("no value here yet") end
 

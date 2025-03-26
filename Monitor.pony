@@ -4,7 +4,6 @@ actor Monitor
     var totalEpochs: USize val
     var totalCells:  USize val
 
-    var _epochEnd:   Bool
     var _simEnd:     Bool
 
     let _sim:        SimulationSpace
@@ -17,35 +16,38 @@ actor Monitor
         epoch       = 0
         cellCounter = 0
 
-        _epochEnd   = false
         _simEnd     = false
 
         _sim        = sim'
         _out        = out'
 
-        be incrementCellCounter() =>
-            cellCounter = cellCounter + 1
+    be incrementCellCounter() =>
+        cellCounter = cellCounter + 1
 
-            if(cellCounter == totalCells) then 
-                incrementEpoch()
-                resetCellCounter()
+        if((cellCounter == totalCells) and (_simEnd == false)) then 
+            _sim.updateCellStates()
+            _sim.printBoard()
+            
+            incrementEpoch()
+            resetCellCounter()
 
-                _sim.updateCells()
-
-                if(epoch == totalEpochs) then 
-                    _out.print("completed")
-                end
-            end
-
-        be start() =>
             _sim.updateCells()
 
-        be finish() =>
-            _sim.
+            if(epoch == totalEpochs) then
+                finish()
+                _out.print("completed")
+            end
+        end
 
-        fun ref incrementEpoch() =>
-            epoch = epoch + 1
+    be start() =>
+        _sim.updateCells()
 
-        fun ref resetCellCounter() =>
-            cellCounter = 0
+    be finish() => 
+        _simEnd = true
+
+    fun ref incrementEpoch() =>
+        epoch = epoch + 1
+
+    fun ref resetCellCounter() =>
+        cellCounter = 0
         

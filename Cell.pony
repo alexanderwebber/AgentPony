@@ -18,8 +18,8 @@ actor Cell
         sim.receiveStatusPosition(sendableStatus, sendablePosition)
 
     be updateStatus(neighborStatuses: Array[U64] iso, monitor: Monitor) =>
-        let statuses: Array[U64] box = consume neighborStatuses
-        var numLiveNeighbors: U64    = 0
+        let statuses: Array[U64]  = consume neighborStatuses
+        var numLiveNeighbors: U64 = 0
 
         for status in statuses.values() do
             if status == 1 then
