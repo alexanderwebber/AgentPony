@@ -5,9 +5,9 @@ actor Monitor
     var totalCells:    USize val
     var updateCounter: USize
 
-    var _simEnd:     Bool
-    let _sim:        SimulationSpace
-    let _out:        OutStream
+    var _simEnd:       Bool
+    let _sim:          SimulationSpace
+    let _out:          OutStream
     
 
     new create(totalCells': USize, totalEpochs': USize, sim': SimulationSpace, out': OutStream) =>
@@ -29,7 +29,6 @@ actor Monitor
             incrementEpoch()
             resetCellCounter()
             _sim.updateCellStates()
-            
 
             if(epoch == totalEpochs) then
                 finish()
@@ -42,7 +41,6 @@ actor Monitor
         if(updateCounter == totalCells) then 
             updateState()
             resetUpdateCounter()    
-            
         end
 
     be updateState() =>

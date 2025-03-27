@@ -19,17 +19,18 @@ actor SimulationSpace
     let _out:                OutStream
 
     new create(sideLength': USize, out': OutStream, timeSteps': USize) =>
-        _sideLength         = recover val sideLength' end
-        _numCells           = _sideLength * _sideLength
-        _timeSteps          = timeSteps'
+        _sideLength    = recover val sideLength' end
+        _numCells      = _sideLength * _sideLength
+        _timeSteps     = timeSt
 
-        _cells              = Array[Cell](_numCells)
-        _cellStates         = Array[U64](_numCells)
-        _statesOutput       = Array[U64](_timeSteps)
+        _cells         = Array[Cell](_numCells)
+        _cellStates    = Array[U64](_numCells)
+        _statesOutput  = Array[U64](_timeStep
+
+        _rand          = Rand
+        _out           = out'
         
-        _rand               = Rand
-        _out                = out'
-        monitor             = Monitor(_numCells, _timeSteps, this, _out)
+        monitor        = Monitor(_numCells, _timeSteps, this, _out)
 
     be loadRandomPositions() =>
         for i in Range(0, _numCells) do 
@@ -37,8 +38,9 @@ actor SimulationSpace
         end
 
         _out.print("\nStarting simulation: \n")
+        printBoard()
 
-    be loadBlinkerFive() =>
+    be loadBlinker() =>
         for i in Range(0, _numCells) do 
             if (i == 7) or (i == 12) or (i == 17) then 
                 _cells.push(Cell(i, 1, _out))

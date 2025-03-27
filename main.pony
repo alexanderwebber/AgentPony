@@ -8,4 +8,4 @@ actor Main
         let timeSteps            = try env.args(2)?.usize()? else 5      end
         let sim: SimulationSpace = SimulationSpace(simSideLength, _out, timeSteps)
 
-        sim.>loadBlinkerFive().>runGameOfLife()
+        sim.>loadRandomPositions().>runGameOfLife()
