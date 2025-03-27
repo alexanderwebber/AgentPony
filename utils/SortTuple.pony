@@ -4,8 +4,6 @@ primitive SortTuple
         
         a
 
-        
-
     fun _quickSortTuple(a: Array[(U64, USize)], low: ISize, high: ISize) ? =>
         if high <= low then return end
 

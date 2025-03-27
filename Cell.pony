@@ -2,48 +2,26 @@ use "promises"
 use "collections"
 
 actor Cell
-    var _position:        USize
-    var _status:          U64 val
-    let _neighbors:       Array[Cell] = Array[Cell](8)
-    let _frozenNeighbors: Array[Cell] = Array[Cell](8)
+    var _position: USize
+    var _status:   U64
+    let _out:      OutStream
 
-    new create(position': USize, initalStatus: U64 val) =>
+    new create(position': USize, status': U64, out': OutStream) =>
         _position = position'
-        _status   = initalStatus
+        _status   = status'
+        _out      = out'
 
-    be getStatus(p: Promise[U64]) =>
-        p(_status)
+    be sendStatusPosition(sim: SimulationSpace) =>
+        let sendableStatus:   U64   = recover val _status   end
+        let sendablePosition: USize = recover val _position end
 
-    be getStatusAndPosition(p: Promise[(U64, USize)]) =>
-        p((_status, _position))
+        sim.receiveStatusPosition(sendableStatus, sendablePosition)
 
-    be printStatus(out: OutStream) =>
-        out.print(_status.string())
-
-    be setNeighbor(neighbor: Cell) =>
-        _neighbors.push(neighbor)
-
-    be freezeNeighbors() =>
-        for i in Range(0, _neighbors.size()) do 
-            try _frozenNeighbors.update(i, _neighbors(i)?)? end
-        end
-
-    be updateStatus() =>
-        let neighborStatusPromises: Array[Promise[U64]] = Array[Promise[U64]](8)
-
-        for neighbor in _frozenNeighbors.values() do 
-            let p = Promise[U64]
-            neighbor.getStatus(p)
-            neighborStatusPromises.push(p)
-        end
-
-        Promises[U64].join(neighborStatusPromises.values())
-        .next[None](recover this~calculateState() end)
-
-    be calculateState(neighborStatuses: Array[U64] val) =>
+    be updateStatus(neighborStatuses: Array[U64] iso, monitor: Monitor) =>
+        let statuses: Array[U64]  = consume neighborStatuses
         var numLiveNeighbors: U64 = 0
 
-        for status in neighborStatuses.values() do
+        for status in statuses.values() do
             if status == 1 then
                 numLiveNeighbors = numLiveNeighbors + 1
             end
@@ -56,3 +34,5 @@ actor Cell
         else
             _status = 0
         end
+
+        monitor.incrementCellCounter()
