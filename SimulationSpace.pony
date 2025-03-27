@@ -80,6 +80,7 @@ actor SimulationSpace
 
     be receiveStatusPosition(status: U64, position: USize) =>
         try _cellStates.update(position, status)? else _out.print("no cell at this index") end
+        monitor.incrementUpdateCounter()
 
     be printBoard() =>
         for i in Range(0, _cellStates.size()) do

@@ -1,48 +1,58 @@
 actor Monitor
-    var cellCounter: USize
-    var epoch:       USize
-    var totalEpochs: USize val
-    var totalCells:  USize val
+    var cellCounter:   USize
+    var epoch:         USize
+    var totalEpochs:   USize val
+    var totalCells:    USize val
+    var updateCounter: USize
 
     var _simEnd:     Bool
-
     let _sim:        SimulationSpace
     let _out:        OutStream
     
 
     new create(totalCells': USize, totalEpochs': USize, sim': SimulationSpace, out': OutStream) =>
-        totalCells  = totalCells'
-        totalEpochs = totalEpochs'
-        epoch       = 0
-        cellCounter = 0
+        totalCells    = totalCells'
+        totalEpochs   = totalEpochs'
+        epoch         = 0
+        cellCounter   = 0
+        updateCounter = 0
 
-        _simEnd     = false
-
-        _sim        = sim'
-        _out        = out'
+        _simEnd       = false
+  
+        _sim          = sim'
+        _out          = out'
 
     be incrementCellCounter() =>
         cellCounter = cellCounter + 1
 
         if((cellCounter == totalCells) and (_simEnd == false)) then 
-            _sim.updateCellStates()
-            _sim.printBoard()
-            
             incrementEpoch()
             resetCellCounter()
-
-            _sim.updateCells()
+            _sim.updateCellStates()
+            
 
             if(epoch == totalEpochs) then
                 finish()
-                _out.print("completed")
             end
         end
+
+    be incrementUpdateCounter() =>
+        updateCounter = updateCounter + 1
+
+        if(updateCounter == totalCells) then 
+            updateState()
+            resetUpdateCounter()    
+            
+        end
+
+    be updateState() =>
+        _sim.printBoard()
+        _sim.updateCells()
 
     be start() =>
         _sim.updateCells()
 
-    be finish() => 
+    fun ref finish() => 
         _simEnd = true
 
     fun ref incrementEpoch() =>
@@ -51,3 +61,5 @@ actor Monitor
     fun ref resetCellCounter() =>
         cellCounter = 0
         
+    fun ref resetUpdateCounter() =>
+        updateCounter = 0
