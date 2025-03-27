@@ -1,5 +1,6 @@
 use "collections"
 use "random"
+use "time"
 use "promises"
 use "pony_test"
 use "./utils"
@@ -13,28 +14,35 @@ actor SimulationSpace
 
     let _cells:              Array[Cell]
     var _cellStates:         Array[U64]
-    var _statesOutput:       Array[U64]
      
     let _rand:               Rand
     let _out:                OutStream
 
     new create(sideLength': USize, out': OutStream, timeSteps': USize) =>
-        _sideLength    = recover val sideLength' end
-        _numCells      = _sideLength * _sideLength
-        _timeSteps     = timeSt
+        _sideLength = recover val sideLength' end
+        _numCells   = _sideLength * _sideLength
+        _timeSteps  = timeSteps'
 
-        _cells         = Array[Cell](_numCells)
-        _cellStates    = Array[U64](_numCells)
-        _statesOutput  = Array[U64](_timeStep
+        _cells      = Array[Cell](_numCells)
+        _cellStates = Array[U64](_numCells)
 
-        _rand          = Rand
-        _out           = out'
-        
-        monitor        = Monitor(_numCells, _timeSteps, this, _out)
+        _rand       = Rand.from_u64(Time.nanos())
+        _out        = out'
+
+        monitor     = Monitor(_numCells, _timeSteps, this, _out)
 
     be loadRandomPositions() =>
-        for i in Range(0, _numCells) do 
-            _cells.push(Cell(i, _rand.next() % 2, _out))
+
+        for i in Range(0, _numCells) do
+            let randStatus = _rand.int_unbiased(2)
+
+            if(randStatus == 1) then 
+                _cells.push(Cell(i, 1, _out))
+                _cellStates.push(1)
+            else
+                _cells.push(Cell(i, 0, _out))
+                _cellStates.push(0)
+            end
         end
 
         _out.print("\nStarting simulation: \n")
@@ -68,7 +76,6 @@ actor SimulationSpace
                 
                     cellNeighborStatuses.push(neighborStatus)
                 end
-                
             end
 
             try _cells(cellIndex)?.updateStatus(consume cellNeighborStatuses, monitor) end
