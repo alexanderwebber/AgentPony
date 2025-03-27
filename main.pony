@@ -5,7 +5,10 @@ actor Main
         _out = env.out
 
         let simSideLength        = try env.args(1)?.usize()? else 5      end
+        if simSideLength < 3 then _out.print("Simulation side length must be at least 3. Defaulting to 5\n") end
+        let adjustedSideLength   = if simSideLength < 3 then 5 else simSideLength end
+
         let timeSteps            = try env.args(2)?.usize()? else 5      end
-        let sim: SimulationSpace = SimulationSpace(simSideLength, _out, timeSteps)
+        let sim: SimulationSpace = SimulationSpace(adjustedSideLength, _out)
 
         sim.>loadRandomPositions().>runGameOfLife()
