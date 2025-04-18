@@ -1,22 +1,21 @@
 use "collections"
 use "random"
 use "time"
-use "promises"
 use "pony_test"
 use "./utils"
 use "./test"
  
 actor SimulationSpace 
-    let _sideLength:         USize   val
-    let _numCells:           USize   val
-    let _timeSteps:          USize   val
-    let monitor:             Monitor
+    let _sideLength: USize   val
+    let _numCells:   USize   val
+    let _timeSteps:  USize   val
+    let monitor:     Monitor
 
-    let _cells:              Array[Cell]
-    var _cellStates:         Array[U64]
+    let _cells:      Array[Cell]
+    var _cellStates: Array[U64]
      
-    let _rand:               Rand
-    let _out:                OutStream
+    let _rand:       Rand
+    let _out:        OutStream
 
     new create(sideLength': USize, out': OutStream, timeSteps': USize) =>
         _sideLength = recover val sideLength' end
@@ -32,7 +31,6 @@ actor SimulationSpace
         monitor     = Monitor(_numCells, _timeSteps, this, _out)
 
     be loadRandomPositions() =>
-
         for i in Range(0, _numCells) do
             let randStatus = _rand.int_unbiased(2)
 
@@ -45,10 +43,32 @@ actor SimulationSpace
             end
         end
 
-        _out.print("\nStarting simulation: \n")
+        _out.print("\nStarting simulation for " 
+                    + _sideLength.string()
+                    + "x"
+                    + _sideLength.string()
+                    + " cells and "
+                    + _timeSteps.string()
+                    + " epochs \n")
+
         printBoard()
 
     be loadBlinker() =>
+        for i in Range(0, _numCells) do 
+            if (i == 31) or (i == 39) or (i == 40) or (i == 41) then 
+                _cells.push(Cell(i, 1, _out))
+                _cellStates.push(1)
+            else
+                _cells.push(Cell(i, 0, _out))
+                _cellStates.push(0)
+            end
+        end
+
+        _out.print("\nStarting simulation \n")
+        
+        printBoard()
+
+    be loadBlock() =>
         for i in Range(0, _numCells) do 
             if (i == 7) or (i == 12) or (i == 17) then 
                 _cells.push(Cell(i, 1, _out))
@@ -59,7 +79,23 @@ actor SimulationSpace
             end
         end
 
-        _out.print("\nStarting simulation: \n")
+        _out.print("\nStarting simulation \n")
+        
+        printBoard()
+
+    be loadBeehive() =>
+        for i in Range(0, _numCells) do 
+            if (i == 7) or (i == 12) or (i == 17) then 
+                _cells.push(Cell(i, 1, _out))
+                _cellStates.push(1)
+            else
+                _cells.push(Cell(i, 0, _out))
+                _cellStates.push(0)
+            end
+        end
+
+        _out.print("\nStarting simulation \n")
+        
         printBoard()
 
     be runGameOfLife() =>

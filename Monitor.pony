@@ -38,9 +38,9 @@ actor Monitor
     be incrementUpdateCounter() =>
         updateCounter = updateCounter + 1
 
-        if(updateCounter == totalCells) then 
+        if(updateCounter == totalCells) then
+            resetUpdateCounter()
             updateState()
-            resetUpdateCounter()    
         end
 
     be updateState() =>
