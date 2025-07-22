@@ -8,4 +8,6 @@ actor Partition
         _simulationSpace = SimulationSpace(sideLength, timeSteps, _out)
         _coordinator     = coordinator'
     
-    
+    be startSimulation() =>
+        _simulationSpace.>loadRandomPositions().>runGameOfLife()
+
