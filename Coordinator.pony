@@ -8,7 +8,7 @@ actor Coordinator
         _sideLength = sideLength'
         _timeSteps  = timeSteps'
         _out        = out'
-
+        
         _partition  = Partition(_sideLength, _timeSteps, this, _out)
 
     be startSimulation() =>

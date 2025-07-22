@@ -10,7 +10,8 @@ actor SimulationSpace
     let _sideLength:         USize   val
     let _numCells:           USize   val
     let _timeSteps:          USize   val
-    let _monitor:             Monitor
+    let _monitor:            Monitor
+    let _partition:          Partition
 
     let _cells:              Array[Cell]
     var _cellStates:         Array[U64]
@@ -18,7 +19,7 @@ actor SimulationSpace
     let _rand:               Rand
     let _out:                OutStream
 
-    new create(sideLength': USize, timeSteps': USize, out': OutStream) =>
+    new create(sideLength': USize, timeSteps': USize, partition': Partition, out': OutStream) =>
         _sideLength = recover val sideLength' end
         _numCells   = _sideLength * _sideLength
         _timeSteps  = timeSteps'
@@ -29,7 +30,8 @@ actor SimulationSpace
         _rand       = Rand.from_u64(Time.nanos())
         _out        = out'
 
-        _monitor     = Monitor(_numCells, _timeSteps, this, _out)
+        _monitor    = Monitor(_numCells, _timeSteps, this, _out)
+        _partition  = partition'
 
     be loadRandomPositions() =>
 
