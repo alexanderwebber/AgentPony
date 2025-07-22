@@ -10,7 +10,7 @@ actor SimulationSpace
     let _sideLength:         USize   val
     let _numCells:           USize   val
     let _timeSteps:          USize   val
-    let monitor:             Monitor
+    let _monitor:             Monitor
 
     let _cells:              Array[Cell]
     var _cellStates:         Array[U64]
@@ -18,7 +18,7 @@ actor SimulationSpace
     let _rand:               Rand
     let _out:                OutStream
 
-    new create(sideLength': USize, out': OutStream, timeSteps': USize) =>
+    new create(sideLength': USize, timeSteps': USize, out': OutStream) =>
         _sideLength = recover val sideLength' end
         _numCells   = _sideLength * _sideLength
         _timeSteps  = timeSteps'
@@ -29,7 +29,7 @@ actor SimulationSpace
         _rand       = Rand.from_u64(Time.nanos())
         _out        = out'
 
-        monitor     = Monitor(_numCells, _timeSteps, this, _out)
+        _monitor     = Monitor(_numCells, _timeSteps, this, _out)
 
     be loadRandomPositions() =>
 
@@ -63,7 +63,7 @@ actor SimulationSpace
         printBoard()
 
     be runGameOfLife() =>
-        monitor.start()
+        _monitor.start()
 
     be updateCells() =>
         for cellIndex in Range(0, _cells.size()) do
@@ -78,7 +78,7 @@ actor SimulationSpace
                 end
             end
 
-            try _cells(cellIndex)?.updateStatus(consume cellNeighborStatuses, monitor) end
+            try _cells(cellIndex)?.updateStatus(consume cellNeighborStatuses, _monitor) end
             
         end
 
@@ -89,7 +89,7 @@ actor SimulationSpace
 
     be receiveStatusPosition(status: U64, position: USize) =>
         try _cellStates.update(position, status)? else _out.print("no cell at this index") end
-        monitor.incrementUpdateCounter()
+        _monitor.incrementUpdateCounter()
 
     be printBoard() =>
         for i in Range(0, _cellStates.size()) do
