@@ -1,10 +1,11 @@
 actor Coordinator
-    let _sideLength: USize
-    let _timeSteps:  USize
-    let _out:        OutStream
-    let _partition:  Partition
+    let _sideLength:    USize
+    let _timeSteps:     USize
+    let _numPartitions: USize
+    let _out:           OutStream
+    let _partition:     Partition
 
-    new create(sideLength': USize, timeSteps': USize, out': OutStream) =>
+    new create(sideLength': USize7, timeSteps': USize, out': OutStream) =>
         _sideLength = sideLength'
         _timeSteps  = timeSteps'
         _out        = out'
@@ -13,3 +14,9 @@ actor Coordinator
 
     be startSimulation() =>
         _partition.startSimulation()
+
+    be splitSimulationSpace() =>
+        // smallest square that can be divided into our equal squares
+        // minimum overall sidelength is equal to the square root of the number of partitions
+        
+        
