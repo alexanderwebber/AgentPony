@@ -9,7 +9,7 @@ actor Monitor
     let _sim:          SimulationSpace
     let _out:          OutStream
     
-
+    // TODO: Signal coordinator epoch finished
     new create(totalCells': USize, totalEpochs': USize, sim': SimulationSpace, out': OutStream) =>
         totalCells    = totalCells'
         totalEpochs   = totalEpochs'

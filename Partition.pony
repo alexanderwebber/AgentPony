@@ -3,6 +3,7 @@ actor Partition
     let _coordinator:     Coordinator
     let _out:             OutStream
 
+    // TODO: receive cells and ghost cells
     new create(sideLength: USize, timeSteps: USize, coordinator': Coordinator, out': OutStream) =>
         _out             = out'
         _simulationSpace = SimulationSpace(sideLength, timeSteps, this, _out)
