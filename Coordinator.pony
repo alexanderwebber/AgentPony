@@ -24,8 +24,7 @@ actor Coordinator
         
 
     fun ref splitSimulationSpace() =>
-        
-        let sideLengthPerPartition: USize = (_sideLength * _sideLength) / (_numPartitions * _numPartitions)
+        let sideLengthPerPartition: USize = ((_sideLength.f64() * _sideLength.f64()) / (_numPartitions.f64())).sqrt().usize()
 
         // TODO: need to send cell indices and ghost cells
         for i in Range(0, _numPartitions) do
