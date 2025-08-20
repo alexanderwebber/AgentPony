@@ -1,1 +1,1 @@
-a concurrent, distributed platform on which to perform agent based simulations using Ponylang. Ponylang is an actor and object oriented language that excels in leveraging its inherent concurrent model of execution. In order to build a highly performant system, we employ state-of-the art concurrency patterns, optimized scheduling and memory management, and utilize distributed information frameworks.
+a concurrent, distributed platform on which to execute agent based simulations using Ponylang. 
