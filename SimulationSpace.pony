@@ -73,6 +73,7 @@ actor SimulationSpace
 
             for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
                 let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, cellIndex, _sideLength)
+                
                 try 
                     let neighborStatus: U64 = _cellStates(neighbor)? 
                 
