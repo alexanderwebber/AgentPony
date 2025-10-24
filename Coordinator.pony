@@ -25,25 +25,25 @@ actor Coordinator
         
     fun ref splitSimulationSpace() =>
         let sideLengthPerPartition: USize = ((_sideLength.f64() * _sideLength.f64()) / (_numPartitions.f64())).sqrt().usize()
-        let rowDiff:                USize = sideLengthPerPartition
-        let colDiff:                USize = sideLengthPerPartition * _sideLength
+        let leftToRightCell:        USize = sideLengthPerPartition
+        let topToBottomCell:        USize = sideLengthPerPartition * _sideLength
         var startIndex:             USize = 0
-        var nextRowIndex:           USize = 0
+        var leftToRightIndex:       USize = 0
+        var topToBottomIndex:       USize = 0
 
         for i in Range(0, _numPartitions.f64().sqrt().usize()) do
-            startIndex = nextRowIndex
-
             for j in Range(0, _numPartitions.f64().sqrt().usize()) do
-                var index:   USize val        = startIndex
                 let indices: Array[USize] iso = Array[USize](sideLengthPerPartition * sideLengthPerPartition)
 
                 for k in Range(0, sideLengthPerPartition) do
+                    var index: USize val = startIndex
+
                     for l in Range(0, sideLengthPerPartition) do 
                         indices.push(index)
                         index = index + 1
                     end
 
-                    index = startIndex + _sideLength
+                    startIndex = startIndex + _sideLength
                 end
 
                 for test in Range(0, indices.size()) do 
@@ -54,12 +54,14 @@ actor Coordinator
                 
                 _partitions.push(Partition(sideLengthPerPartition, _timeSteps, this, _out, consume indices))
 
-                startIndex = startIndex + rowDiff
+                leftToRightIndex = leftToRightIndex + leftToRightCell
+                startIndex       = leftToRightIndex
 
             end
 
-            nextRowIndex = nextRowIndex + colDiff 
-
+            topToBottomIndex = topToBottomIndex + topToBottomCell
+            leftToRightIndex = topToBottomIndex
+            startIndex       = topToBottomIndex
         end
 
 

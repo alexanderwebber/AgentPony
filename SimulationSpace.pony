@@ -73,7 +73,7 @@ actor SimulationSpace
 
             for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
                 let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, cellIndex, _sideLength)
-                
+
                 try 
                     let neighborStatus: U64 = _cellStates(neighbor)? 
                 
@@ -94,6 +94,7 @@ actor SimulationSpace
         try _cellStates.update(position, status)? else _out.print("no cell at this index") end
         _monitor.incrementUpdateCounter()
 
+    // Have this output to text file for reconstruction in a different language
     be printBoard() =>
         for i in Range(0, _cellStates.size()) do
             let state = try _cellStates(i)? else _out.print("no value here yet") end
