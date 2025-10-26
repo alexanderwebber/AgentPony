@@ -17,7 +17,7 @@ actor Cell
 
         sim.receiveStatusPosition(sendableStatus, sendablePosition)
 
-    be updateStatus(neighborStatuses: Array[U64] iso, monitor: Monitor) =>
+    be updateStatus(neighborStatuses: Array[U64] iso, coordinator: Coordinator) =>
         let statuses:         Array[U64]  = consume neighborStatuses
         var numLiveNeighbors: U64         = 0
 
@@ -35,4 +35,4 @@ actor Cell
             _status = 0
         end
 
-        monitor.incrementCellCounter()
+        coordinator.incrementCellCounter()
