@@ -1,21 +1,24 @@
 FROM ubuntu:24.04
 
-RUN  apt update && \
-     apt upgrade -y
-     
-RUN  apt install -y curl git
+ENV PATH="/root/.local/share/ponyup/bin:$PATH"
 
-RUN  sh -c "$(curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/ponylang/ponyup/latest-release/ponyup-init.sh)"
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    clang \
+    curl \
+    g++ \
+    git \
+    lsb-release \
+    make \
+  && rm -rf /var/lib/apt/lists/*
 
-RUN  apt install -y curl git
+RUN sh -c "$(curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/ponylang/ponyup/latest-release/ponyup-init.sh)" \
+ && ponyup update ponyc release \
+ && ponyup update corral release \
+ && ponyup update changelog-tool release
 
-ENV PATH="/root/.local/share/ponyup/bin:/root/.local/share/ponyup/pony-stable/bin:${PATH}"
-
-RUN echo PATH
-
-RUN  ponyup update ponyc release
-     
-RUN  git clone https://github.com/alexanderwebber/AgentPony
+RUN git clone https://github.com/alexanderwebber/AgentPony
 
 WORKDIR /AgentPony
 
