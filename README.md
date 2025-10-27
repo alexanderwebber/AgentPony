@@ -1,1 +1,1 @@
-a actor model, distributed platform on which to execute agent based simulations using Ponylang. 
+a distributed platform utilizing the actor model on which to execute agent based simulations using Ponylang. 
