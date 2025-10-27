@@ -15,8 +15,7 @@ actor SimulationSpace
     let _rand:        Rand
     let _out:         OutStream
 
-    let _cells:       Array[Cell]
-    var _cellStates:  Array[U64]
+    let _cells:       Array[(USize, Cell)]
     let _indices:     Array[USize val]
     let _initStates:  Array[USize val]
 
@@ -26,8 +25,7 @@ actor SimulationSpace
         _numCells    = _sideLength * _sideLength
         _totalCells  = totalCells'
 
-        _cells       = Array[Cell](_numCells)
-        _cellStates  = Array[U64](_numCells)
+        _cells       = Array[(USize, Cell)](_numCells)
         _initStates  = Array[USize](_numCells)
 
         _rand        = Rand.from_u64(Time.nanos())
@@ -40,42 +38,33 @@ actor SimulationSpace
             let randStatus = _rand.int_unbiased(2)
 
             if(randStatus == 1) then 
-                _cells.push(Cell(index, 1, _out))
-                _coordinator.updateState(index, 1)
+                _cells.push((index, Cell(index, 1, _out)))
+                _coordinator.loadInitial(index, 1)
             else
-                _cells.push(Cell(index, 0, _out))
-                _coordinator.updateState(index, 0)
+                _cells.push((index, Cell(index, 0, _out)))
+                _coordinator.loadInitial(index, 0)
             end
-
-            _coordinator.incrementCellCounter()
-            
         end
 
-    be simStep(globalCellStates: Array[USize]) =>
-        // request updated cell states from Coordinator
-
-        for cellIndex in Range(0, _cells.size()) do
-            let cellNeighborStatuses: Array[U64] iso = Array[U64](8)
+    be simStep(globalCellStates: Array[USize] val, globalSideLength: USize) =>
+        for cell in _cells.values() do
+            let cellNeighborStatuses: Array[USize] iso = Array[USize](8)
 
             for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
-                let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, cellIndex, _sideLength)
+                let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, cell._1, globalSideLength)
 
                 try 
-                    let neighborStatus: U64 = _cellStates(neighbor)? 
+                    let neighborStatus: USize = globalCellStates(neighbor)? 
                 
                     cellNeighborStatuses.push(neighborStatus)
                 end
             end
 
-            try _cells(cellIndex)?.updateStatus(consume cellNeighborStatuses, _coordinator) end
+            cell._2.updateStatus(consume cellNeighborStatuses, _coordinator)
             
         end
 
-    be updateCellStates() =>
+    be updateCoordinatorCellStates() =>
         for cell in _cells.values() do 
-            cell.sendStatusPosition(this)
+            cell._2.sendStateAndPosition(_coordinator)
         end
-
-    be receiveStatusPosition(status: U64, position: USize) =>
-        try _cellStates.update(position, status)? else _out.print("no cell at this index") end
-        _coordinator.incrementUpdateCounter()

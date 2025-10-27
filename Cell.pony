@@ -3,23 +3,23 @@ use "collections"
 
 actor Cell
     var _position: USize
-    var _status:   U64
+    var _status:   USize
     let _out:      OutStream
 
-    new create(position': USize, status': U64, out': OutStream) =>
+    new create(position': USize, status': USize, out': OutStream) =>
         _position = position'
         _status   = status'
         _out      = out'
 
-    be sendStatusPosition(sim: SimulationSpace) =>
-        let sendableStatus:   U64   = recover val _status   end
+    be sendStateAndPosition(coordinator: Coordinator) =>
+        let sendableStatus:   USize = recover val _status   end
         let sendablePosition: USize = recover val _position end
 
-        sim.receiveStatusPosition(sendableStatus, sendablePosition)
+        coordinator.updateAndIncrementCounter(sendablePosition, sendableStatus)
 
-    be updateStatus(neighborStatuses: Array[U64] iso, coordinator: Coordinator) =>
-        let statuses:         Array[U64]  = consume neighborStatuses
-        var numLiveNeighbors: U64         = 0
+    be updateStatus(neighborStatuses: Array[USize] iso, coordinator: Coordinator) =>
+        let statuses:         Array[USize]  = consume neighborStatuses
+        var numLiveNeighbors: USize         = 0
 
         for status in statuses.values() do
             if status == 1 then
@@ -35,4 +35,4 @@ actor Cell
             _status = 0
         end
 
-        coordinator.incrementCellCounter()
+        coordinator.partitionCalculateCellStateCounter()

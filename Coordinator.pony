@@ -34,15 +34,15 @@ actor Coordinator
         _partitions    = Array[SimulationSpace](_numPartitions)
         _cellStates    = Array[USize](_numCells)
 
-    be startSimulation() =>
-        splitSimulationSpace()
+    be initSimulation() =>
+        partitionSimulationSpace()
         loadZeros()
 
         for partition in _partitions.values() do 
             partition.initStates()
         end
 
-    fun ref splitSimulationSpace() =>
+    fun ref partitionSimulationSpace() =>
         let sideLengthPerPartition: USize = ((_sideLength.f64() * _sideLength.f64()) / (_numPartitions.f64())).sqrt().usize()
         let leftToRightCell:        USize = sideLengthPerPartition
         let topToBottomCell:        USize = sideLengthPerPartition * _sideLength
@@ -82,30 +82,35 @@ actor Coordinator
             _cellStates.push(0)
         end
 
-    be updateState(index: USize, state: USize) =>
+    be loadInitial(index: USize, state: USize) =>
         try _cellStates.update(index, state)? else _out.print("invalid index") end
 
-    // TODO: Have this output to text file for reconstruction in a different language
-    be printBoard() =>
-        _out.print(" ")
-
-        for i in Range(0, _numCells) do
-            let state = try _cellStates(i)? else _out.print("no value here yet") end
-
-            if ((i % (_sideLength)) == (_sideLength - 1)) and (i != 0) then 
-                _out.print(state.string())
-            else
-                _out.write(state.string() + " ")
-            end
-        end
-
-        _out.print(" ")
-
-    be incrementUpdateCounter() =>
         _updateCounter = _updateCounter + 1
 
         if(_updateCounter == _numCells) then 
-            resetUpdateCounter()    
+            resetUpdateCounter()
+            printBoard()
+            
+            for sim in _partitions.values() do
+                let copyCellStates: Array[USize] iso = recover Array[USize] end
+
+                for value in _cellStates.values() do 
+                    copyCellStates.push(value)
+                end
+
+                sim.simStep(consume copyCellStates, _sideLength)
+            end
+        end
+
+    be partitionCalculateCellStateCounter() =>
+        _updateCounter = _updateCounter + 1
+
+        if(_updateCounter == _numCells) then 
+            resetUpdateCounter()
+
+            for sim in _partitions.values() do 
+                sim.updateCoordinatorCellStates()
+            end
         end
 
     fun ref finish() => 
@@ -120,20 +125,46 @@ actor Coordinator
     fun ref resetUpdateCounter() =>
         _updateCounter = 0
 
-    be incrementCellCounter() =>
+    be updateAndIncrementCounter(index: USize, state: USize) =>
+        try _cellStates.update(index, state)? else _out.print("invalid index") end
+
         _cellCounter = _cellCounter + 1
 
         if((_cellCounter == _numCells) and (_simEnd == false)) then 
             incrementEpoch()
             resetCellCounter()
-            //_sim.updateCellStates()
-
             printBoard()
+
+            for sim in _partitions.values() do
+                let copyCellStates: Array[USize] iso = recover Array[USize] end
+
+                for value in _cellStates.values() do 
+                    copyCellStates.push(value)
+                end
+
+                sim.simStep(consume copyCellStates, _sideLength)
+            end
 
             if(_epoch == _timeSteps) then
                 finish()
             end
         end
+
+    // TODO: Have this output to text file for reconstruction in a different language
+    fun printBoard() =>
+        _out.print(" ")
+
+        for i in Range(0, _numCells) do
+            let state = try _cellStates(i)? else _out.print("no value here yet") end
+
+            if ((i % (_sideLength)) == (_sideLength - 1)) and (i != 0) then 
+                _out.print(state.string())
+            else
+                _out.write(state.string() + " ")
+            end
+        end
+
+        _out.print(" ")
     
         
         
