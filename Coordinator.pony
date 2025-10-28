@@ -1,6 +1,7 @@
 use "collections"
 use "random"
 use "time"
+use "files"
 
 actor Coordinator
     let _sideLength:    USize
@@ -13,12 +14,13 @@ actor Coordinator
     var _simEnd:        Bool
 
     let _rand:          Rand
+    let _file:          File
     let _out:           OutStream
     
     let _partitions:    Array[SimulationSpace]
     let _cellStates:    Array[USize]
 
-    new create(sideLength': USize, timeSteps': USize, numPartitions': USize, out': OutStream) =>
+    new create(sideLength': USize, timeSteps': USize, numPartitions': USize, out': OutStream, file': File iso) =>
         _sideLength    = sideLength'
         _timeSteps     = timeSteps'
         _out           = out'
@@ -30,9 +32,10 @@ actor Coordinator
         _updateCounter = 0
         _simEnd        = false
         _rand          = Rand.from_u64(Time.nanos())
+        _file          = consume file'
         
         _partitions    = Array[SimulationSpace](_numPartitions)
-        _cellStates    = Array[USize](_numCells)
+        _cellStates    = Array[USize](_numCells)     
 
     be initSimulation() =>
         partitionSimulationSpace()
@@ -89,7 +92,7 @@ actor Coordinator
 
         if(_updateCounter == _numCells) then 
             resetUpdateCounter()
-            printBoard()
+            printBoard(0)
             
             for sim in _partitions.values() do
                 let copyCellStates: Array[USize] iso = recover Array[USize] end
@@ -113,18 +116,6 @@ actor Coordinator
             end
         end
 
-    fun ref finish() => 
-        _simEnd = true
-
-    fun ref incrementEpoch() =>
-        _epoch = _epoch + 1
-
-    fun ref resetCellCounter() =>
-        _cellCounter = 0
-        
-    fun ref resetUpdateCounter() =>
-        _updateCounter = 0
-
     be updateAndIncrementCounter(index: USize, state: USize) =>
         try _cellStates.update(index, state)? else _out.print("invalid index") end
 
@@ -133,7 +124,7 @@ actor Coordinator
         if((_cellCounter == _numCells) and (_simEnd == false)) then 
             incrementEpoch()
             resetCellCounter()
-            printBoard()
+            printBoard(_epoch)
 
             for sim in _partitions.values() do
                 let copyCellStates: Array[USize] iso = recover Array[USize] end
@@ -150,21 +141,36 @@ actor Coordinator
             end
         end
 
-    // TODO: Have this output to text file for reconstruction in a different language
-    fun printBoard() =>
-        _out.print(" ")
+    fun ref finish() => 
+        _simEnd = true
+
+    fun ref incrementEpoch() =>
+        _epoch = _epoch + 1
+
+    fun ref resetCellCounter() =>
+        _cellCounter = 0
+        
+    fun ref resetUpdateCounter() =>
+        _updateCounter = 0
+
+    fun ref printBoard(epoch: USize) =>
+        _file.print(" ")
+        _file.print("epoch" 
+                + "_" 
+                + epoch.string() 
+                + ":")
 
         for i in Range(0, _numCells) do
             let state = try _cellStates(i)? else _out.print("no value here yet") end
 
             if ((i % (_sideLength)) == (_sideLength - 1)) and (i != 0) then 
-                _out.print(state.string())
+                _file.print(state.string())
             else
-                _out.write(state.string() + " ")
+                _file.write(state.string() + " ")
             end
         end
 
-        _out.print(" ")
+        _file.print(" ")
     
         
         
