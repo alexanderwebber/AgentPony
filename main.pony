@@ -1,13 +1,36 @@
+use "files"
+
 actor Main
-    let _out: OutStream
-
     new create(env: Env) =>
-        _out = env.out
+        let simSideLength:  USize       = try env.args(1)?.usize()? else 1000           end
+        let timeSteps:      USize       = try env.args(2)?.usize()? else 30             end
+        let numPartitions:  USize       = try env.args(3)?.usize()? else 16             end
+        let runNumber:      USize       = try env.args(4)?.usize()? else 0              end
+        let simulationType: String      = try env.args(5)?          else "game_of_life" end
 
-        let simSideLength            = try env.args(1)?.usize()? else 8 end
-        let timeSteps                = try env.args(2)?.usize()? else 1 end
-        let numPartitions            = try env.args(3)?.usize()? else 16 end
+        let out:            OutStream   = env.out
 
-        let coordinator: Coordinator = Coordinator(simSideLength, timeSteps, numPartitions, _out)
+        try
+            let dir: FilePath = FilePath.create(FileAuth(env.root), "output")
+            dir.mkdir()
 
-        coordinator.initSimulation()
+            let simFileName: FilePath = FilePath.from(dir, "simulation_output_" 
+                                                        + simulationType 
+                                                        + "_" 
+                                                        + runNumber.string() 
+                                                        + ".txt")?
+
+            let file = recover iso
+                match CreateFile(simFileName)
+                | let f: File => f
+                else
+                    error
+                end
+            end
+
+            let coordinator: Coordinator = Coordinator(simSideLength, timeSteps, numPartitions, out, consume file)
+            
+            coordinator.initSimulation()
+        else
+            env.err.print("Cannot create output file")
+        end
