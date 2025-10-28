@@ -154,7 +154,6 @@ actor Coordinator
         _updateCounter = 0
 
     fun ref printBoard(epoch: USize) =>
-        _file.print(" ")
         _file.print("epoch" 
                 + "_" 
                 + epoch.string() 
