@@ -7,29 +7,31 @@ use "./utils"
 use "./test"
  
 actor SimulationSpace
-    let _sideLength:  USize val
-    let _numCells:    USize val
-    let _totalCells:  USize val
+    let _sideLength:       USize val
+    let _globalSideLength: USize val
+    let _numCells:         USize val
+    let _totalCells:       USize val
 
-    let _coordinator: Coordinator
-    let _rand:        Rand
-    let _out:         OutStream
+    let _coordinator:      Coordinator
+    let _rand:             Rand
+    let _out:              OutStream
 
-    let _cells:       Array[(USize, Cell)]
-    let _indices:     Array[USize val]
-    let _initStates:  Array[USize val]
+    let _cells:            Array[(USize, Cell)]
+    let _indices:          Array[USize val]
+    let _initStates:       Array[USize val]
 
-    new create(sideLength': USize, totalCells': USize, out': OutStream, coordinator': Coordinator, indices': Array[USize val] iso) =>
-        _sideLength  = recover val sideLength' end
-        _indices     = consume indices'
-        _numCells    = _sideLength * _sideLength
-        _totalCells  = totalCells'
+    new create(sideLength': USize, globalSideLength': USize, totalCells': USize, out': OutStream, coordinator': Coordinator, indices': Array[USize val] iso) =>
+        _sideLength       = recover val sideLength' end
+        _globalSideLength = globalSideLength'
+        _indices          = consume indices'
+        _numCells         = _sideLength * _sideLength
+        _totalCells       = totalCells'
 
-        _cells       = Array[(USize, Cell)](_numCells)
-        _initStates  = Array[USize](_numCells)
+        _cells            = Array[(USize, Cell)](_numCells)
+        _initStates       = Array[USize](_numCells)
 
-        _rand        = Rand.from_u64(Time.nanos())
-        _out         = out'
+        _rand             = Rand.from_u64(Time.nanos())
+        _out              = out'
 
         _coordinator = coordinator'
         
@@ -39,19 +41,19 @@ actor SimulationSpace
 
             if(randStatus == 1) then 
                 _cells.push((index, Cell(index, 1, _out)))
-                _coordinator.loadInitial(index, 1)
+                _coordinator.loadInitialValues(index, 1)
             else
                 _cells.push((index, Cell(index, 0, _out)))
-                _coordinator.loadInitial(index, 0)
+                _coordinator.loadInitialValues(index, 0)
             end
         end
 
-    be simStep(globalCellStates: Array[USize] val, globalSideLength: USize) =>
+    be simStep(globalCellStates: Array[USize] val) =>
         for cell in _cells.values() do
             let cellNeighborStatuses: Array[USize] iso = Array[USize](8)
 
             for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
-                let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, cell._1, globalSideLength)
+                let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, cell._1, _globalSideLength)
 
                 try 
                     let neighborStatus: USize = globalCellStates(neighbor)? 
@@ -64,7 +66,7 @@ actor SimulationSpace
             
         end
 
-    be updateCoordinatorCellStates() =>
+    be updateCellStates() =>
         for cell in _cells.values() do 
             cell._2.sendStateAndPosition(_coordinator)
         end
