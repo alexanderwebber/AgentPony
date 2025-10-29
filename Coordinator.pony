@@ -3,13 +3,13 @@ use "random"
 use "time"
 use "files"
 
-actor Coordinator
+actor Coordinator is (PrintBoard & CountingHandler)
     let _sideLength:    USize
     let _timeSteps:     USize
     let _numPartitions: USize
     let _numCells:      USize
     var _cellCounter:   USize
-    var _updateCounter: USize
+    var _counter: USize
     var _epoch:         USize
     var _simEnd:        Bool
 
@@ -29,7 +29,7 @@ actor Coordinator
 
         _cellCounter   = 0
         _epoch         = 0
-        _updateCounter = 0
+        _counter = 0
         _simEnd        = false
         _rand          = Rand.from_u64(Time.nanos())
         _file          = consume file'
@@ -88,11 +88,11 @@ actor Coordinator
     be loadInitial(index: USize, state: USize) =>
         try _cellStates.update(index, state)? else _out.print("invalid index") end
 
-        _updateCounter = _updateCounter + 1
+        incrementCounter()
 
-        if(_updateCounter == _numCells) then 
-            resetUpdateCounter()
-            printBoard(0)
+        if(_counter == _numCells) then 
+            resetCounter()
+            printBoard()
             
             for sim in _partitions.values() do
                 let copyCellStates: Array[USize] iso = recover Array[USize] end
@@ -106,25 +106,25 @@ actor Coordinator
         end
 
     be partitionCalculateCellStateCounter() =>
-        _updateCounter = _updateCounter + 1
+        incrementCounter()
 
-        if(_updateCounter == _numCells) then 
-            resetUpdateCounter()
+        if(_counter == _numCells) then 
+            resetCounter()
 
             for sim in _partitions.values() do 
                 sim.updateCoordinatorCellStates()
             end
         end
 
-    be updateAndIncrementCounter(index: USize, state: USize) =>
+    be updateCellAndIncrementCounter(index: USize, state: USize) =>
         try _cellStates.update(index, state)? else _out.print("invalid index") end
 
-        _cellCounter = _cellCounter + 1
+        incrementCounter()
 
-        if((_cellCounter == _numCells) and (_simEnd == false)) then 
+        if((_counter == _numCells) and (_simEnd == false)) then 
             incrementEpoch()
-            resetCellCounter()
-            printBoard(_epoch)
+            resetCounter()
+            printBoard()
 
             if(_epoch == _timeSteps) then
                 finish()
@@ -141,36 +141,15 @@ actor Coordinator
             end
         end
 
-    fun ref finish() => 
-        _simEnd = true
-
-    fun ref incrementEpoch() =>
-        _epoch = _epoch + 1
-
-    fun ref resetCellCounter() =>
-        _cellCounter = 0
-        
-    fun ref resetUpdateCounter() =>
-        _updateCounter = 0
-
-    fun ref printBoard(epoch: USize) =>
-        _file.print("epoch" 
-                + "_" 
-                + epoch.string() 
-                + ":")
-
-        for i in Range(0, _numCells) do
-            let state = try _cellStates(i)? else _out.print("no value here yet") end
-
-            if ((i % (_sideLength)) == (_sideLength - 1)) and (i != 0) then 
-                _file.print(state.string())
-            else
-                _file.write(state.string() + " ")
-            end
-        end
-
-        _file.print(" ")
-    
+    fun     epoch():                  USize        => _epoch
+    fun     numCells():               USize        => _numCells
+    fun     sideLength():             USize        => _sideLength
+    fun     counter():                USize        => _counter
+    fun ref file():                   File         => _file
+    fun ref cellStates():             Array[USize] => _cellStates
+    fun ref finish()                               => _simEnd  = true
+    fun ref updateEpoch(v: USize):    USize        => _epoch   = v
+    fun ref updateCounter(v: USize):  USize        => _counter = v
         
         
         
