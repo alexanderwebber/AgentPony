@@ -2,8 +2,9 @@ use "collections"
 use "random"
 use "time"
 use "files"
+use "./utils"
 
-actor Coordinator is (PrintBoard & CountingHandler)
+actor Coordinator is Initialization
     let _sideLength:    USize
     let _timeSteps:     USize
     let _numPartitions: USize
@@ -37,86 +38,26 @@ actor Coordinator is (PrintBoard & CountingHandler)
         _partitions    = Array[SimulationSpace](_numPartitions)
         _cellStates    = Array[USize](_numCells)     
 
-    be initSimulation() =>
-        partitionSimulationSpace()
+    be startSimulation() =>
+        partitionSimulationSpace(this)
         loadZeros()
 
         for partition in _partitions.values() do 
             partition.initStates()
         end
 
-    fun ref partitionSimulationSpace() =>
-        let sideLengthPerPartition: USize = ((_sideLength.f64() * _sideLength.f64()) / (_numPartitions.f64())).sqrt().usize()
-        let leftToRightCell:        USize = sideLengthPerPartition
-        let topToBottomCell:        USize = sideLengthPerPartition * _sideLength
-        var startIndex:             USize = 0
-        var leftToRightIndex:       USize = 0
-        var topToBottomIndex:       USize = 0
-
-        for i in Range(0, _numPartitions.f64().sqrt().usize()) do
-            for j in Range(0, _numPartitions.f64().sqrt().usize()) do
-                let indices: Array[USize] iso = Array[USize](sideLengthPerPartition * sideLengthPerPartition)
-
-                for k in Range(0, sideLengthPerPartition) do
-                    var index: USize val = startIndex
-
-                    for l in Range(0, sideLengthPerPartition) do 
-                        indices.push(index)
-                        index = index + 1
-                    end
-
-                    startIndex = startIndex + _sideLength
-                end
-                
-                _partitions.push(SimulationSpace(sideLengthPerPartition, _numCells, _out, this, consume indices))
-
-                leftToRightIndex = leftToRightIndex + leftToRightCell
-                startIndex       = leftToRightIndex
-
-            end
-
-            topToBottomIndex = topToBottomIndex + topToBottomCell
-            leftToRightIndex = topToBottomIndex
-            startIndex       = topToBottomIndex
-        end
-
-    fun ref loadZeros() =>
-        for index in Range(0, _numCells) do
-            _cellStates.push(0)
-        end
-
-    be loadInitial(index: USize, state: USize) =>
-        try _cellStates.update(index, state)? else _out.print("invalid index") end
-
-        incrementCounter()
-
-        if(_counter == _numCells) then 
-            resetCounter()
-            printBoard()
-            
-            for sim in _partitions.values() do
-                let copyCellStates: Array[USize] iso = recover Array[USize] end
-
-                for value in _cellStates.values() do 
-                    copyCellStates.push(value)
-                end
-
-                sim.simStep(consume copyCellStates, _sideLength)
-            end
-        end
-
-    be partitionCalculateCellStateCounter() =>
+    be cellStateCalculated() =>
         incrementCounter()
 
         if(_counter == _numCells) then 
             resetCounter()
 
             for sim in _partitions.values() do 
-                sim.updateCoordinatorCellStates()
+                sim.updateCellStates()
             end
         end
 
-    be updateCellAndIncrementCounter(index: USize, state: USize) =>
+    be cellStateUpdated(index: USize, state: USize) =>
         try _cellStates.update(index, state)? else _out.print("invalid index") end
 
         incrementCounter()
@@ -137,16 +78,19 @@ actor Coordinator is (PrintBoard & CountingHandler)
                     copyCellStates.push(value)
                 end
 
-                sim.simStep(consume copyCellStates, _sideLength)
+                sim.simStep(consume copyCellStates)
             end
         end
 
     fun     epoch():                  USize        => _epoch
     fun     numCells():               USize        => _numCells
     fun     sideLength():             USize        => _sideLength
+    fun     numPartitions():          USize        => _numPartitions
     fun     counter():                USize        => _counter
+    fun     out():                    OutStream    => _out
     fun ref file():                   File         => _file
     fun ref cellStates():             Array[USize] => _cellStates
+    fun ref partitions():             Array[SimulationSpace] => _partitions
     fun ref finish()                               => _simEnd  = true
     fun ref updateEpoch(v: USize):    USize        => _epoch   = v
     fun ref updateCounter(v: USize):  USize        => _counter = v

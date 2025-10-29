@@ -15,7 +15,7 @@ actor Cell
         let sendableStatus:   USize = recover val _status   end
         let sendablePosition: USize = recover val _position end
 
-        coordinator.updateCellAndIncrementCounter(sendablePosition, sendableStatus)
+        coordinator.cellStateUpdated(sendablePosition, sendableStatus)
 
     be updateStatus(neighborStatuses: Array[USize] iso, coordinator: Coordinator) =>
         let statuses:         Array[USize]  = consume neighborStatuses
@@ -35,4 +35,4 @@ actor Cell
             _status = 0
         end
 
-        coordinator.partitionCalculateCellStateCounter()
+        coordinator.cellStateCalculated()
