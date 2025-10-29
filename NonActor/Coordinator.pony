@@ -3,7 +3,7 @@ use "random"
 use "time"
 use "files"
 
-actor Coordinator
+class Coordinator
     let _sideLength:    USize
     let _timeSteps:     USize
     let _numPartitions: USize
@@ -37,7 +37,7 @@ actor Coordinator
         _partitions    = Array[SimulationSpace](_numPartitions)
         _cellStates    = Array[USize](_numCells)     
 
-    be initSimulation() =>
+    fun ref initSimulation() =>
         partitionSimulationSpace()
         loadZeros()
 
@@ -85,7 +85,7 @@ actor Coordinator
             _cellStates.push(0)
         end
 
-    be loadInitial(index: USize, state: USize) =>
+    fun ref loadInitial(index: USize, state: USize) =>
         try _cellStates.update(index, state)? else _out.print("invalid index") end
 
         _updateCounter = _updateCounter + 1
@@ -103,9 +103,10 @@ actor Coordinator
 
                 sim.simStep(consume copyCellStates, _sideLength)
             end
+            
         end
 
-    be partitionCalculateCellStateCounter() =>
+    fun ref partitionCalculateCellStateCounter() =>
         _updateCounter = _updateCounter + 1
 
         if(_updateCounter == _numCells) then 
@@ -116,7 +117,7 @@ actor Coordinator
             end
         end
 
-    be updateAndIncrementCounter(index: USize, state: USize) =>
+    fun ref updateAndIncrementCounter(index: USize, state: USize) =>
         try _cellStates.update(index, state)? else _out.print("invalid index") end
 
         _cellCounter = _cellCounter + 1
@@ -139,6 +140,8 @@ actor Coordinator
 
                 sim.simStep(consume copyCellStates, _sideLength)
             end
+
+            
         end
 
     fun ref finish() => 
@@ -170,7 +173,3 @@ actor Coordinator
         end
 
         _file.print(" ")
-    
-        
-        
-        
