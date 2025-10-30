@@ -7,9 +7,9 @@ actor Cell
     let _out:      OutStream
 
     new create(position': USize, status': USize, out': OutStream) =>
-        _position = position'
-        _status   = status'
-        _out      = out'
+        _position  = position'
+        _status    = status'
+        _out       = out'
 
     be sendStateAndPosition(coordinator: Coordinator) =>
         let sendableStatus:   USize = recover val _status   end

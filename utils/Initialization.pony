@@ -6,6 +6,7 @@ trait Initialization is (PrintBoard & CountingHandler)
     fun     sideLength():    USize
     fun     counter():       USize
     fun     numPartitions(): USize
+    fun     outputToFile():  Bool
     fun     out():           OutStream
     fun ref cellStates():    Array[USize]
     fun ref partitions():    Array[SimulationSpace]
@@ -22,7 +23,11 @@ trait Initialization is (PrintBoard & CountingHandler)
 
         if(counter() == numCells()) then 
             resetCounter()
-            printBoard()
+
+            if(outputToFile()) then 
+                printBoard()
+            end
+            
             
             for sim in partitions().values() do
                 let copyCellStates: Array[USize] iso = recover Array[USize] end

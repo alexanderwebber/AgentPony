@@ -16,7 +16,7 @@ actor SimulationSpace
     let _rand:             Rand
     let _out:              OutStream
 
-    let _cells:            Array[(USize, Cell)]
+    let _cells:            Array[(USize, Cell, USize, Array[USize])]
     let _indices:          Array[USize val]
     let _initStates:       Array[USize val]
 
@@ -27,7 +27,7 @@ actor SimulationSpace
         _numCells         = _sideLength * _sideLength
         _totalCells       = totalCells'
 
-        _cells            = Array[(USize, Cell)](_numCells)
+        _cells            = Array[(USize, Cell, USize, Array[USize])](_numCells)
         _initStates       = Array[USize](_numCells)
 
         _rand             = Rand.from_u64(Time.nanos())
@@ -37,13 +37,20 @@ actor SimulationSpace
         
     be initStates() =>
         for index in _indices.values() do
-            let randStatus = _rand.int_unbiased(2)
+            let randStatus                          = _rand.int_unbiased(2)
+            let cellNeighborPositions: Array[USize] = Array[USize](8)
+
+            for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
+                let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, index, _globalSideLength)
+                
+                cellNeighborPositions.push(neighbor)
+            end
 
             if(randStatus == 1) then 
-                _cells.push((index, Cell(index, 1, _out)))
+                _cells.push((index, Cell(index, 1, _out), 1, cellNeighborPositions))
                 _coordinator.loadInitialValues(index, 1)
             else
-                _cells.push((index, Cell(index, 0, _out)))
+                _cells.push((index, Cell(index, 0, _out), 0, cellNeighborPositions))
                 _coordinator.loadInitialValues(index, 0)
             end
         end
@@ -52,10 +59,8 @@ actor SimulationSpace
         for cell in _cells.values() do
             let cellNeighborStatuses: Array[USize] iso = Array[USize](8)
 
-            for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
-                let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, cell._1, _globalSideLength)
-
-                try 
+            for neighbor in cell._4.values() do
+                try
                     let neighborStatus: USize = globalCellStates(neighbor)? 
                 
                     cellNeighborStatuses.push(neighborStatus)
@@ -63,7 +68,6 @@ actor SimulationSpace
             end
 
             cell._2.updateStatus(consume cellNeighborStatuses, _coordinator)
-            
         end
 
     be updateCellStates() =>
