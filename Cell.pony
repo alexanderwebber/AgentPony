@@ -1,23 +1,23 @@
 use "promises"
 use "collections"
 
-actor Cell
+class Cell
     var _position: USize
     var _status:   USize
     let _out:      OutStream
 
     new create(position': USize, status': USize, out': OutStream) =>
-        _position = position'
-        _status   = status'
-        _out      = out'
+        _position  = position'
+        _status    = status'
+        _out       = out'
 
-    be sendStateAndPosition(coordinator: Coordinator) =>
+    fun sendStateAndPosition(sim: SimulationSpace) =>
         let sendableStatus:   USize = recover val _status   end
         let sendablePosition: USize = recover val _position end
 
-        coordinator.cellStateUpdated(sendablePosition, sendableStatus)
+        sim.cellPositionStateUpdated(sendablePosition, sendableStatus)
 
-    be updateStatus(neighborStatuses: Array[USize] iso, coordinator: Coordinator) =>
+    fun ref updateStatus(neighborStatuses: Array[USize] iso, sim: SimulationSpace) =>
         let statuses:         Array[USize]  = consume neighborStatuses
         var numLiveNeighbors: USize         = 0
 
@@ -35,4 +35,4 @@ actor Cell
             _status = 0
         end
 
-        coordinator.cellStateCalculated()
+        sim.localCellStatesCalculated()
