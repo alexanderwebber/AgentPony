@@ -16,30 +16,6 @@ trait Initialization is (PrintBoard & CountingHandler)
             cellStates().push(0)
         end
 
-    be loadInitialValues(index: USize, state: USize) =>
-        try cellStates().update(index, state)? else out().print("invalid index") end
-
-        incrementCounter()
-
-        if(counter() == numCells()) then 
-            resetCounter()
-
-            if(outputToFile()) then 
-                printBoard()
-            end
-            
-            
-            for sim in partitions().values() do
-                let copyCellStates: Array[USize] iso = recover Array[USize] end
-
-                for value in cellStates().values() do 
-                    copyCellStates.push(value)
-                end
-
-                sim.simStep(consume copyCellStates)
-            end
-        end
-
     fun ref partitionSimulationSpace(coordinator: Coordinator) =>
         let sideLengthPerPartition: USize = ((sideLength().f64() * sideLength().f64()) / (numPartitions().f64())).sqrt().usize()
         let leftToRightCell:        USize = sideLengthPerPartition

@@ -49,10 +49,10 @@ actor Coordinator is Initialization
             partition.initStates()
         end
 
-    be cellStateCalculated() =>
+    be cellStatesCalculated() =>
         incrementCounter()
 
-        if(_counter == _numCells) then 
+        if(_counter == _numPartitions) then 
             resetCounter()
 
             for sim in _partitions.values() do 
@@ -60,12 +60,16 @@ actor Coordinator is Initialization
             end
         end
 
-    be cellStateUpdated(index: USize, state: USize) =>
-        try _cellStates.update(index, state)? else _env.out.print("invalid index") end
+    be cellStatesUpdated(cellPosStates': Array[(USize, USize)] iso) =>
+        let cellPosStates: Array[(USize, USize)] = consume cellPosStates'
+        
+        for posState in cellPosStates.values() do 
+            try _cellStates.update(posState._1, posState._2)? end
+        end
 
         incrementCounter()
 
-        if((_counter == _numCells) and (_simEnd == false)) then 
+        if((_counter == _numPartitions) and (_simEnd == false)) then 
             incrementEpoch()
             resetCounter()
 
