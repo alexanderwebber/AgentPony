@@ -6,6 +6,11 @@ use "pony_test"
 use "./utils"
 use "./test"
  
+
+
+// CONSIDER ADDING MONITOR
+// Consider simspaces communicate with each other. neighbors predefined, send to coordinator once received all neighbors and updated states, then immediately sends states to neighbors again. 
+
 actor SimulationSpace
     let _sideLength:       USize val
     let _globalSideLength: USize val
@@ -19,7 +24,7 @@ actor SimulationSpace
     let _rand:             Rand
     let _out:              OutStream
 
-    let _cells:            Array[(USize, Cell, USize, Array[USize])]
+    let _cells:            Array[(USize, SchellingCell, USize, Array[USize])]
     let _inactiveCells:    Array[USize]
     let _indices:          Array[USize val]
     let _cellPosState:     Array[(USize, USize)]
@@ -33,7 +38,7 @@ actor SimulationSpace
         _counter          = 0
         _inactiveCounter  = 0
 
-        _cells            = Array[(USize, Cell, USize, Array[USize])](_numCells)
+        _cells            = Array[(USize, SchellingCell, USize, Array[USize])](_numCells)
         _inactiveCells    = Array[USize](_numCells)
         _cellPosState     = Array[(USize, USize)](_numCells)
 
@@ -44,7 +49,7 @@ actor SimulationSpace
         
     be initStates() =>
         for index in _indices.values() do
-            let randStatus                          = _rand.int_unbiased(2)
+            let randStatus                          = _rand.int_unbiased(3)
             let cellNeighborPositions: Array[USize] = Array[USize](8)
 
             for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
@@ -53,12 +58,16 @@ actor SimulationSpace
                 cellNeighborPositions.push(neighbor)
             end
 
-            if(randStatus == 1) then 
-                _cells.push((index, Cell(index, 1, _out), 1, cellNeighborPositions))
+            match randStatus
+            | 0 =>
+                _cells.push((index, SchellingCell(index, 0, 3, _out), 0, cellNeighborPositions))
+                _cellPosState.push((index, 0))
+            | 1 =>
+                _cells.push((index, SchellingCell(index, 1, 3, _out), 1, cellNeighborPositions))
                 _cellPosState.push((index, 1))
             else
-                _cells.push((index, Cell(index, 0, _out), 0, cellNeighborPositions))
-                _cellPosState.push((index, 0))
+                _cells.push((index, SchellingCell(index, 2, 3, _out), 2, cellNeighborPositions))
+                _cellPosState.push((index, 2))
             end
         end
 
@@ -89,7 +98,7 @@ actor SimulationSpace
         end
 
 
-    be localCellStatesCalculated(changed: Bool, index: USize, state: USize) =>
+    be localSatisfactionCalculated(satisfaction: Bool, index: USize, state: USize) =>
         _cellPosState.push((index, state))
 
         _counter = _counter + 1
@@ -105,4 +114,18 @@ actor SimulationSpace
             _coordinator.cellStatesUpdated(consume tempCopyCellStates)
         end
 
+    be localCellStatesCalculated(changed: Bool, index: USize, state: USize) =>
+        _cellPosState.push((index, state))
 
+        _counter = _counter + 1
+
+        if(_counter == _numCells) then 
+            let tempCopyCellStates: Array[(USize, USize)] iso = Array[(USize, USize)](_numCells)
+
+            for value in _cellPosState.values() do 
+                tempCopyCellStates.push(value)
+            end
+
+            _counter = 0
+            _coordinator.cellStatesUpdated(consume tempCopyCellStates)
+        end
