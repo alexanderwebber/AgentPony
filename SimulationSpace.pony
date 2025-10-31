@@ -9,6 +9,7 @@ use "./test"
 
 
 // CONSIDER ADDING MONITOR
+// Consider simspaces communicate with each other. neighbors predefined, send to coordinator once received all neighbors and updated states, then immediately sends states to neighbors again. 
 
 actor SimulationSpace
     let _sideLength:       USize val

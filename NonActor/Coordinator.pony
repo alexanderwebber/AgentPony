@@ -5,6 +5,8 @@ use "files"
 use "runtime_info"
 use "./utils"
 
+// GIVE EACH SIMSPACE A COORDINATE
+
 class Coordinator is Initialization
     let _sideLength:    USize
     let _timeSteps:     USize
