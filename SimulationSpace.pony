@@ -12,12 +12,15 @@ actor SimulationSpace
     let _numCells:         USize val
     let _totalCells:       USize val
     var _counter:          USize
+    var _inactiveCounter:  USize
+
 
     let _coordinator:      Coordinator
     let _rand:             Rand
     let _out:              OutStream
 
     let _cells:            Array[(USize, Cell, USize, Array[USize])]
+    let _inactiveCells:    Array[USize]
     let _indices:          Array[USize val]
     let _cellPosState:     Array[(USize, USize)]
 
@@ -28,14 +31,16 @@ actor SimulationSpace
         _numCells         = _sideLength * _sideLength
         _totalCells       = totalCells'
         _counter          = 0
+        _inactiveCounter  = 0
 
         _cells            = Array[(USize, Cell, USize, Array[USize])](_numCells)
+        _inactiveCells    = Array[USize](_numCells)
         _cellPosState     = Array[(USize, USize)](_numCells)
 
         _rand             = Rand.from_u64(Time.nanos())
         _out              = out'
 
-        _coordinator = coordinator'
+        _coordinator      = coordinator'
         
     be initStates() =>
         for index in _indices.values() do
@@ -67,6 +72,7 @@ actor SimulationSpace
 
     be simStep(globalCellStates: Array[USize] val) =>
         _cellPosState.clear()
+        _inactiveCells.clear()
 
         for cell in _cells.values() do
             let cellNeighborStatuses: Array[USize] iso = Array[USize](8)
@@ -82,12 +88,8 @@ actor SimulationSpace
             cell._2.updateStatus(consume cellNeighborStatuses, this)
         end
 
-    be updateCellStates() =>
-        for cell in _cells.values() do 
-            cell._2.sendStateAndPosition(this)
-        end
 
-    be cellPositionStateUpdated(index: USize, state: USize) =>
+    be localCellStatesCalculated(changed: Bool, index: USize, state: USize) =>
         _cellPosState.push((index, state))
 
         _counter = _counter + 1
@@ -101,14 +103,6 @@ actor SimulationSpace
 
             _counter = 0
             _coordinator.cellStatesUpdated(consume tempCopyCellStates)
-        end
-
-    be localCellStatesCalculated() =>
-        _counter = _counter + 1
-
-        if(_counter == _numCells) then 
-            _counter = 0
-            _coordinator.cellStatesCalculated()    
         end
 
 

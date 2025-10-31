@@ -11,7 +11,7 @@ actor Coordinator is Initialization
     let _numPartitions: USize
     let _numCells:      USize
     var _cellCounter:   USize
-    var _counter: USize
+    var _counter:       USize
     var _epoch:         USize
     var _simEnd:        Bool
     let _outputToFile:  Bool
@@ -47,17 +47,6 @@ actor Coordinator is Initialization
 
         for partition in _partitions.values() do 
             partition.initStates()
-        end
-
-    be cellStatesCalculated() =>
-        incrementCounter()
-
-        if(_counter == _numPartitions) then 
-            resetCounter()
-
-            for sim in _partitions.values() do 
-                sim.updateCellStates()
-            end
         end
 
     be cellStatesUpdated(cellPosStates': Array[(USize, USize)] iso) =>

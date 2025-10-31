@@ -16,7 +16,7 @@ trait Initialization is (PrintBoard & CountingHandler)
             cellStates().push(0)
         end
 
-    fun ref partitionSimulationSpace(coordinator: Coordinator) =>
+    fun ref partitionSimulationSpace(coordinator: Coordinator ref) =>
         let sideLengthPerPartition: USize = ((sideLength().f64() * sideLength().f64()) / (numPartitions().f64())).sqrt().usize()
         let leftToRightCell:        USize = sideLengthPerPartition
         let topToBottomCell:        USize = sideLengthPerPartition * sideLength()

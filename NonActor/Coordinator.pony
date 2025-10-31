@@ -2,42 +2,46 @@ use "collections"
 use "random"
 use "time"
 use "files"
+use "runtime_info"
+use "./utils"
 
-class Coordinator
+class Coordinator is Initialization
     let _sideLength:    USize
     let _timeSteps:     USize
     let _numPartitions: USize
     let _numCells:      USize
     var _cellCounter:   USize
-    var _updateCounter: USize
+    var _counter:       USize
     var _epoch:         USize
     var _simEnd:        Bool
+    let _outputToFile:  Bool
 
     let _rand:          Rand
     let _file:          File
-    let _out:           OutStream
+    let _env:           Env
     
     let _partitions:    Array[SimulationSpace]
     let _cellStates:    Array[USize]
 
-    new create(sideLength': USize, timeSteps': USize, numPartitions': USize, out': OutStream, file': File iso) =>
+    new create(sideLength': USize, timeSteps': USize, numPartitions': USize, outputToFile': Bool, env': Env, file': File iso) =>
         _sideLength    = sideLength'
         _timeSteps     = timeSteps'
-        _out           = out'
         _numPartitions = numPartitions'
         _numCells      = _sideLength * _sideLength
 
         _cellCounter   = 0
         _epoch         = 0
-        _updateCounter = 0
+        _counter       = 0
         _simEnd        = false
+        _outputToFile  = outputToFile'
         _rand          = Rand.from_u64(Time.nanos())
         _file          = consume file'
+        _env           = env'
         
         _partitions    = Array[SimulationSpace](_numPartitions)
-        _cellStates    = Array[USize](_numCells)     
+        _cellStates    = Array[USize](_numCells)
 
-    fun ref initSimulation() =>
+    fun ref startSimulation() =>
         partitionSimulationSpace()
         loadZeros()
 
@@ -46,15 +50,15 @@ class Coordinator
         end
 
     fun ref partitionSimulationSpace() =>
-        let sideLengthPerPartition: USize = ((_sideLength.f64() * _sideLength.f64()) / (_numPartitions.f64())).sqrt().usize()
+        let sideLengthPerPartition: USize = ((sideLength().f64() * sideLength().f64()) / (numPartitions().f64())).sqrt().usize()
         let leftToRightCell:        USize = sideLengthPerPartition
-        let topToBottomCell:        USize = sideLengthPerPartition * _sideLength
+        let topToBottomCell:        USize = sideLengthPerPartition * sideLength()
         var startIndex:             USize = 0
         var leftToRightIndex:       USize = 0
         var topToBottomIndex:       USize = 0
 
-        for i in Range(0, _numPartitions.f64().sqrt().usize()) do
-            for j in Range(0, _numPartitions.f64().sqrt().usize()) do
+        for i in Range(0, numPartitions().f64().sqrt().usize()) do
+            for j in Range(0, numPartitions().f64().sqrt().usize()) do
                 let indices: Array[USize] iso = Array[USize](sideLengthPerPartition * sideLengthPerPartition)
 
                 for k in Range(0, sideLengthPerPartition) do
@@ -65,10 +69,10 @@ class Coordinator
                         index = index + 1
                     end
 
-                    startIndex = startIndex + _sideLength
+                    startIndex = startIndex + sideLength()
                 end
                 
-                _partitions.push(SimulationSpace(sideLengthPerPartition, _numCells, _out, this, consume indices))
+                partitions().push(SimulationSpace(sideLengthPerPartition, sideLength(), numCells(), out(), this, consume indices))
 
                 leftToRightIndex = leftToRightIndex + leftToRightCell
                 startIndex       = leftToRightIndex
@@ -80,96 +84,46 @@ class Coordinator
             startIndex       = topToBottomIndex
         end
 
-    fun ref loadZeros() =>
-        for index in Range(0, _numCells) do
-            _cellStates.push(0)
-        end
-
-    fun ref loadInitial(index: USize, state: USize) =>
-        try _cellStates.update(index, state)? else _out.print("invalid index") end
-
-        _updateCounter = _updateCounter + 1
-
-        if(_updateCounter == _numCells) then 
-            resetUpdateCounter()
-            printBoard(0)
-            
-            for sim in _partitions.values() do
-                let copyCellStates: Array[USize] iso = recover Array[USize] end
-
-                for value in _cellStates.values() do 
-                    copyCellStates.push(value)
-                end
-
-                sim.simStep(consume copyCellStates, _sideLength)
-            end
-            
-        end
-
-    fun ref partitionCalculateCellStateCounter() =>
-        _updateCounter = _updateCounter + 1
-
-        if(_updateCounter == _numCells) then 
-            resetUpdateCounter()
-
-            for sim in _partitions.values() do 
-                sim.updateCoordinatorCellStates()
-            end
-        end
-
-    fun ref updateAndIncrementCounter(index: USize, state: USize) =>
-        try _cellStates.update(index, state)? else _out.print("invalid index") end
-
-        _cellCounter = _cellCounter + 1
-
-        if((_cellCounter == _numCells) and (_simEnd == false)) then 
-            incrementEpoch()
-            resetCellCounter()
-            printBoard(_epoch)
-
-            if(_epoch == _timeSteps) then
-                finish()
-            end
-
-            for sim in _partitions.values() do
-                let copyCellStates: Array[USize] iso = recover Array[USize] end
-
-                for value in _cellStates.values() do 
-                    copyCellStates.push(value)
-                end
-
-                sim.simStep(consume copyCellStates, _sideLength)
-            end
-
-            
-        end
-
-    fun ref finish() => 
-        _simEnd = true
-
-    fun ref incrementEpoch() =>
-        _epoch = _epoch + 1
-
-    fun ref resetCellCounter() =>
-        _cellCounter = 0
+    fun ref cellStatesUpdated(cellPosStates': Array[(USize, USize)] iso) =>
+        let cellPosStates: Array[(USize, USize)] = consume cellPosStates'
         
-    fun ref resetUpdateCounter() =>
-        _updateCounter = 0
+        for posState in cellPosStates.values() do 
+            try _cellStates.update(posState._1, posState._2)? end
+        end
 
-    fun ref printBoard(epoch: USize) =>
-        _file.print("epoch" 
-                + "_" 
-                + epoch.string() 
-                + ":")
+        incrementCounter()
 
-        for i in Range(0, _numCells) do
-            let state = try _cellStates(i)? else _out.print("no value here yet") end
+        if((_counter == _numPartitions) and (_simEnd == false)) then 
+            incrementEpoch()
+            resetCounter()
 
-            if ((i % (_sideLength)) == (_sideLength - 1)) and (i != 0) then 
-                _file.print(state.string())
-            else
-                _file.write(state.string() + " ")
+            if(_outputToFile) then printBoard() end
+
+            if(_epoch == _timeSteps) then finish() end
+
+            let tempCopyCellStates: Array[USize] iso = Array[USize](_numCells)
+
+            for value in _cellStates.values() do 
+                tempCopyCellStates.push(value)
+            end
+
+            let sendableCellStates: Array[USize] val = consume tempCopyCellStates
+
+            for sim in _partitions.values() do
+                sim.simStep(sendableCellStates)
             end
         end
 
-        _file.print(" ")
+    fun     epoch():                  USize                  => _epoch
+    fun     numCells():               USize                  => _numCells
+    fun     sideLength():             USize                  => _sideLength
+    fun     numPartitions():          USize                  => _numPartitions
+    fun     counter():                USize                  => _counter
+    fun     outputToFile():           Bool                   => _outputToFile
+    fun     out():                    OutStream              => _env.out
+    fun ref file():                   File                   => _file
+    fun ref cellStates():             Array[USize]           => _cellStates
+    fun ref partitions():             Array[SimulationSpace] => _partitions
+    fun ref finish()                                         => _simEnd  = true
+    fun ref updateEpoch(v: USize):    USize                  => _epoch   = v
+    fun ref updateCounter(v: USize):  USize                  => _counter = v

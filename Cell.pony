@@ -4,18 +4,16 @@ use "collections"
 class Cell
     var _position: USize
     var _status:   USize
+    var _previous: USize
+    var _changed:  Bool
     let _out:      OutStream
 
     new create(position': USize, status': USize, out': OutStream) =>
         _position  = position'
         _status    = status'
+        _previous  = 100
+        _changed   = true
         _out       = out'
-
-    fun sendStateAndPosition(sim: SimulationSpace) =>
-        let sendableStatus:   USize = recover val _status   end
-        let sendablePosition: USize = recover val _position end
-
-        sim.cellPositionStateUpdated(sendablePosition, sendableStatus)
 
     fun ref updateStatus(neighborStatuses: Array[USize] iso, sim: SimulationSpace) =>
         let statuses:         Array[USize]  = consume neighborStatuses
@@ -35,4 +33,16 @@ class Cell
             _status = 0
         end
 
-        sim.localCellStatesCalculated()
+        if(_previous == _status) then 
+            _changed = false    
+        else
+            _changed = true
+        end
+
+        _previous = _status
+
+        let sendablePosition: USize = recover val _position end
+        let sendableStatus:   USize = recover val _status   end
+
+        sim.localCellStatesCalculated(_changed, sendablePosition, sendableStatus)
+        
