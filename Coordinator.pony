@@ -11,7 +11,7 @@ actor Coordinator is Initialization
     let _numPartitions: USize
     let _numCells:      USize
     var _cellCounter:   USize
-    var _counter: USize
+    var _counter:       USize
     var _epoch:         USize
     var _simEnd:        Bool
     let _outputToFile:  Bool
