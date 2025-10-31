@@ -1,4 +1,3 @@
-use "promises"
 use "collections"
 
 class Cell
