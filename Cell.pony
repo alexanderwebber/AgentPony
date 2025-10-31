@@ -1,7 +1,7 @@
 use "promises"
 use "collections"
 
-class Cell
+actor Cell
     var _position: USize
     var _status:   USize
     var _previous: USize
@@ -15,13 +15,7 @@ class Cell
         _changed   = true
         _out       = out'
 
-    fun sendStateAndPosition(sim: SimulationSpace) =>
-        let sendableStatus:   USize = recover val _status   end
-        let sendablePosition: USize = recover val _position end
-
-        sim.cellPositionStateReceived(sendablePosition, sendableStatus)
-
-    fun ref updateStatus(neighborStatuses: Array[USize] iso, sim: SimulationSpace) =>
+    be updateStatus(neighborStatuses: Array[USize] iso, sim: SimulationSpace) =>
         let statuses:         Array[USize]  = consume neighborStatuses
         var numLiveNeighbors: USize         = 0
 
@@ -48,5 +42,9 @@ class Cell
         _previous = _status
 
         let sendablePosition: USize = recover val _position end
+        let sendableStatus:   USize = recover val _status   end
 
-        sim.localCellStatesCalculated(_changed, sendablePosition)
+        sim.localCellStatesCalculated(_changed, sendablePosition, sendableStatus)
+
+    fun newStatus(numLiveNeighbors: USize): USize =>
+        

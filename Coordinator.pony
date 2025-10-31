@@ -49,17 +49,6 @@ actor Coordinator is Initialization
             partition.initStates()
         end
 
-    be cellStatesCalculated() =>
-        incrementCounter()
-
-        if(_counter == _numPartitions) then 
-            resetCounter()
-
-            for sim in _partitions.values() do 
-                sim.updateCellStates()
-            end
-        end
-
     be cellStatesUpdated(cellPosStates': Array[(USize, USize)] iso) =>
         let cellPosStates: Array[(USize, USize)] = consume cellPosStates'
         
