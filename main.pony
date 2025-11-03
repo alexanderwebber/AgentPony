@@ -2,7 +2,7 @@ use "files"
 
 actor Main
     new create(env: Env) =>
-        let simSideLength:  USize       = try env.args(1)?.usize()? else 256                end
+        let simSideLength:  USize       = try env.args(1)?.usize()? else 8                end
         let timeSteps:      USize       = try env.args(2)?.usize()? else 3                end
         let numPartitions:  USize       = try env.args(3)?.usize()? else 16               end
         let runNumber:      USize       = try env.args(4)?.usize()? else 0                end

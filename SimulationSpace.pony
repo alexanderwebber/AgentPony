@@ -6,8 +6,6 @@ use "pony_test"
 use "./utils"
 use "./test"
 
-// Consider simspaces communicate with each other. neighbors predefined, send to coordinator once received all neighbors and updated states, then immediately sends states to neighbors again. 
-
 actor SimulationSpace is (CountingHandler & EpochHandler)
     let _sideLength:            USize val
     let _globalSideLength:      USize val
@@ -18,14 +16,12 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
     var _counter:               USize
     var _epoch:                 USize
     var _partitionCounter:      USize
-    var _inactiveCounter:       USize
 
     let _coordinator:           Coordinator
     let _rand:                  Rand
     let _out:                   OutStream
 
     let _cells:                 Array[(USize, Cell, USize, Array[USize])]
-    let _inactiveCells:         Array[USize]
     let _neighboringPartitions: Array[SimulationSpace]
     let _indices:               Array[(USize val, USize val)]
     let _cellPosState:          Array[(USize, USize)]
@@ -42,10 +38,8 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
         _counter               = 0
         _epoch                 = 0
         _partitionCounter      = 0
-        _inactiveCounter       = 0
 
         _cells                 = Array[(USize, Cell, USize, Array[USize])](_numCells)
-        _inactiveCells         = Array[USize](_numCells)
         _cellPosState          = Array[(USize, USize)](_numCells)
         _nextCellPosState      = Array[(USize, USize)](_numCells)
         _neighboringPartitions = Array[SimulationSpace]
@@ -56,27 +50,9 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
         _coordinator           = coordinator'
     
     be initCells() =>
-        for index in _indices.values() do
-            let randStatus                          = _rand.int_unbiased(2)
-            let cellNeighborPositions: Array[USize] = Array[USize](8)
+        assignCellNeighbors()
 
-            for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
-                let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, index._1, _globalSideLength)
-                
-                cellNeighborPositions.push(neighbor)
-            end
-
-            _cells.push((index._1, Cell(index._1, index._2, _out), 1, cellNeighborPositions))
-            _cellPosState.push((index._1, index._2))
-        end
-
-        let tempCopyCellStates: Array[(USize, USize)] iso = Array[(USize, USize)](_numCells)
-
-        for value in _cellPosState.values() do 
-            tempCopyCellStates.push(value)
-        end
-
-        let sendablePositionsStates: Array[(USize, USize)] val = consume tempCopyCellStates
+        let sendablePositionsStates: Array[(USize, USize)] val = createSendableCopy()
         let sendableEpoch:           USize val                 = recover val _epoch end
 
         sendNeighbors()
@@ -104,14 +80,11 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
 
         if(_counter == _numCells) then
             _cellPosState.clear()
-            let tempCopyCellStates: Array[(USize, USize)] iso = Array[(USize, USize)](_numCells)
-
             for value in _nextCellPosState.values() do 
-                tempCopyCellStates.push(value)
                 _cellPosState.push(value)
             end
 
-            let sendablePositionsStates: Array[(USize, USize)] val = consume tempCopyCellStates
+            let sendablePositionsStates: Array[(USize, USize)] val = createSendableCopy()
             let sendableEpoch:           USize val                 = recover val _epoch end
 
             if(_epoch == _timeSteps) then 
@@ -127,29 +100,14 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
 
         end
 
-    be addPartition(partition: SimulationSpace) => 
-        _neighboringPartitions.push(partition)
-
-        _coordinator.initBarrier()
-
     be sendNeighbors() =>
-        let tempCopyCellStates: Array[(USize, USize)] iso = Array[(USize, USize)](_numCells)
-
-        for value in _cellPosState.values() do 
-            tempCopyCellStates.push(value)
-        end
-
-        let sendablePositionsStates: Array[(USize, USize)] val = consume tempCopyCellStates
+        let sendablePositionsStates: Array[(USize, USize)] val = createSendableCopy()
 
         for partition in _neighboringPartitions.values() do 
             partition.collectNeighborCellPositionsStates(_epoch, sendablePositionsStates)
         end
 
     be collectNeighborCellPositionsStates(epoch': USize, ghostCells: Array[(USize, USize)] val) =>
-        // if epoch' != _epoch then 
-        //     _out.print("mismatch at partition:" + _position.string() + " epoch: " + _epoch.string() + " got epoch: " + epoch'.string())
-        // end
-
         _partitionCounter = _partitionCounter + 1
 
         _cellPosState.append(ghostCells)
@@ -160,11 +118,43 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
             simStep()
         end
 
+    be addPartition(partition: SimulationSpace) => 
+        _neighboringPartitions.push(partition)
+
+        _coordinator.initBarrier()
+
+    fun ref assignCellNeighbors() =>
+        for index in _indices.values() do
+            let randStatus                          = _rand.int_unbiased(2)
+            let cellNeighborPositions: Array[USize] = Array[USize](8)
+
+            for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
+                let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, index._1, _globalSideLength)
+                
+                cellNeighborPositions.push(neighbor)
+            end
+
+            _cells.push((index._1, Cell(index._1, index._2, _out), 1, cellNeighborPositions))
+            _cellPosState.push((index._1, index._2))
+        end
+
+    fun createSendableCopy(): Array[(USize, USize)] val =>
+        let tempCopyCellStates: Array[(USize, USize)] iso = Array[(USize, USize)](_numCells)
+
+        for value in _cellPosState.values() do 
+            tempCopyCellStates.push(value)
+        end
+
+        let sendablePositionsStates: Array[(USize, USize)] val = consume tempCopyCellStates
+        sendablePositionsStates
+
+
     fun     counter():               USize => _counter
     fun     epoch():                 USize => _epoch
     fun ref updateEpoch(v: USize):   USize => _epoch   = v
     fun ref updateCounter(v: USize): USize => _counter = v
 
+    
 
     // be initSchelling() =>
     //     for index in _indices.values() do
