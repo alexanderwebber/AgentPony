@@ -21,7 +21,8 @@ actor Coordinator is Initialization
     let _env:           Env
     
     let _partitions:    Array[SimulationSpace]
-    let _cellStates:    Array[USize]
+    let _cellStates:    Array[(USize, Bool)]
+    let _emptyCells:    Array[(USize, USize)]
 
     new create(sideLength': USize, timeSteps': USize, numPartitions': USize, outputToFile': Bool, env': Env, file': File iso) =>
         _sideLength    = sideLength'
@@ -39,7 +40,8 @@ actor Coordinator is Initialization
         _env           = env'
         
         _partitions    = Array[SimulationSpace](_numPartitions)
-        _cellStates    = Array[USize](_numCells)
+        _cellStates    = Array[(USize, Bool)](_numCells)
+        _emptyCells    = Array[(USize, USize)](_numCells)
 
     be startSimulation() =>
         partitionSimulationSpace(this)
@@ -49,35 +51,84 @@ actor Coordinator is Initialization
             partition.initStates()
         end
 
-    be cellStatesUpdated(cellPosStates': Array[(USize, USize)] iso) =>
-        let cellPosStates: Array[(USize, USize)] = consume cellPosStates'
+    // be cellStatesUpdated(cellPosStates': Array[(USize, USize)] iso) =>
+    //     let cellPosStates: Array[(USize, USize)] = consume cellPosStates'
+        
+    //     for posState in cellPosStates.values() do 
+    //         try _cellStates.update(posState._1, posState._2)? end
+    //     end
+
+    //     incrementCounter()
+
+    //     if((_counter == _numPartitions) and (_simEnd == false)) then 
+    //         incrementEpoch()
+    //         resetCounter()
+
+    //         if(_outputToFile) then printBoard() end
+
+    //         if(_epoch == _timeSteps) then finish() end
+
+    //         let tempCopyCellStates: Array[USize] iso = createSendableCopy()
+
+    //         let sendableCellStates: Array[USize] val = consume tempCopyCellStates
+
+    //         for sim in _partitions.values() do
+    //             sim.simStep(sendableCellStates)
+    //         end
+    //     end
+
+    be schellingUpdate(cellPosStates': Array[(USize, USize, Bool)] iso, emptyLocations': Array[(USize, USize)] iso) =>
+        let cellPosStates: Array[(USize, USize, Bool)] = consume cellPosStates'
+        let emptyCells:    Array[(USize, USize)] = consume emptyLocations'
         
         for posState in cellPosStates.values() do 
-            try _cellStates.update(posState._1, posState._2)? end
+            try _cellStates.update(posState._1, (posState._2, posState._3))? end
+        end
+
+        for empty in emptyCells.values() do 
+            _emptyCells.push(empty)
         end
 
         incrementCounter()
 
-        if((_counter == _numPartitions) and (_simEnd == false)) then 
+        if((_counter == _numPartitions) and (_simEnd == false)) then
             incrementEpoch()
             resetCounter()
+            swapUnsatisfied(_cellStates, _emptyCells)
+            _emptyCells.clear()
 
             if(_outputToFile) then printBoard() end
 
             if(_epoch == _timeSteps) then finish() end
 
-            let tempCopyCellStates: Array[USize] iso = Array[USize](_numCells)
-
-            for value in _cellStates.values() do 
-                tempCopyCellStates.push(value)
-            end
-
-            let sendableCellStates: Array[USize] val = consume tempCopyCellStates
+            let tempCopyCellStates: Array[USize] val = recover val createSendableCopy() end
 
             for sim in _partitions.values() do
-                sim.simStep(sendableCellStates)
+                sim.simStep(tempCopyCellStates)
+            end
+
+            
+        end
+
+    fun ref swapUnsatisfied(cellStates': Array[(USize, Bool)], emptyCells': Array[(USize, USize)]) =>
+        for cell in cellStates'.values() do 
+            if cell._2 == false then 
+                let randPosition = _rand.int_unbiased(emptyCells'.size().u64())
+
+                try _env.out.print(emptyCells'(randPosition.usize())?._2.string()) end
             end
         end
+
+        _env.out.print("test")
+
+    fun createSendableCopy(): Array[USize] iso^ =>
+        let tempCopyCellStates: Array[USize] iso = Array[USize](_numCells)
+
+        for value in _cellStates.values() do 
+            tempCopyCellStates.push(value._1)
+        end
+
+        tempCopyCellStates
 
     fun     epoch():                  USize                  => _epoch
     fun     numCells():               USize                  => _numCells
@@ -87,7 +138,7 @@ actor Coordinator is Initialization
     fun     outputToFile():           Bool                   => _outputToFile
     fun     out():                    OutStream              => _env.out
     fun ref file():                   File                   => _file
-    fun ref cellStates():             Array[USize]           => _cellStates
+    fun ref cellStates():             Array[(USize, Bool)]   => _cellStates
     fun ref partitions():             Array[SimulationSpace] => _partitions
     fun ref finish()                                         => _simEnd  = true
     fun ref updateEpoch(v: USize):    USize                  => _epoch   = v

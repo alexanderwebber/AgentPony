@@ -5,11 +5,6 @@ use "promises"
 use "pony_test"
 use "./utils"
 use "./test"
- 
-
-
-// CONSIDER ADDING MONITOR
-// Consider simspaces communicate with each other. neighbors predefined, send to coordinator once received all neighbors and updated states, then immediately sends states to neighbors again. 
 
 actor SimulationSpace
     let _sideLength:       USize val
@@ -17,17 +12,15 @@ actor SimulationSpace
     let _numCells:         USize val
     let _totalCells:       USize val
     var _counter:          USize
-    var _inactiveCounter:  USize
-
 
     let _coordinator:      Coordinator
     let _rand:             Rand
     let _out:              OutStream
 
     let _cells:            Array[(USize, SchellingCell, USize, Array[USize])]
-    let _inactiveCells:    Array[USize]
+    let _emptyCells:       Array[(USize, USize)]
     let _indices:          Array[USize val]
-    let _cellPosState:     Array[(USize, USize)]
+    let _cellPosState:     Array[(USize, USize, Bool)]
 
     new create(sideLength': USize, globalSideLength': USize, totalCells': USize, out': OutStream, coordinator': Coordinator, indices': Array[USize val] iso) =>
         _sideLength       = recover val sideLength' end
@@ -36,11 +29,10 @@ actor SimulationSpace
         _numCells         = _sideLength * _sideLength
         _totalCells       = totalCells'
         _counter          = 0
-        _inactiveCounter  = 0
 
         _cells            = Array[(USize, SchellingCell, USize, Array[USize])](_numCells)
-        _inactiveCells    = Array[USize](_numCells)
-        _cellPosState     = Array[(USize, USize)](_numCells)
+        _cellPosState     = Array[(USize, USize, Bool)](_numCells)
+        _emptyCells       = Array[(USize, USize)](_numCells)
 
         _rand             = Rand.from_u64(Time.nanos())
         _out              = out'
@@ -61,27 +53,25 @@ actor SimulationSpace
             match randStatus
             | 0 =>
                 _cells.push((index, SchellingCell(index, 0, 3, _out), 0, cellNeighborPositions))
-                _cellPosState.push((index, 0))
+                _cellPosState.push((index, 0, true))
             | 1 =>
                 _cells.push((index, SchellingCell(index, 1, 3, _out), 1, cellNeighborPositions))
-                _cellPosState.push((index, 1))
+                _cellPosState.push((index, 1, true))
             else
                 _cells.push((index, SchellingCell(index, 2, 3, _out), 2, cellNeighborPositions))
-                _cellPosState.push((index, 2))
+                _cellPosState.push((index, 2, true))
             end
         end
 
-        let tempCopyCellStates: Array[(USize, USize)] iso = Array[(USize, USize)](_numCells)
+        let tempCopyCellStates:  Array[(USize, USize, Bool)] iso = createSendableCopy()
+        let tempEmptyCellStates: Array[(USize, USize)]       iso = createSendableEmpty()
 
-        for value in _cellPosState.values() do 
-            tempCopyCellStates.push(value)
-        end
-
-        _coordinator.cellStatesUpdated(consume tempCopyCellStates)
+        _coordinator.schellingUpdate(consume tempCopyCellStates, consume tempEmptyCellStates)
 
     be simStep(globalCellStates: Array[USize] val) =>
         _cellPosState.clear()
-        _inactiveCells.clear()
+        _emptyCells.clear()
+        changeLocalStates(globalCellStates)
 
         for cell in _cells.values() do
             let cellNeighborStatuses: Array[USize] iso = Array[USize](8)
@@ -98,34 +88,59 @@ actor SimulationSpace
         end
 
 
-    be localSatisfactionCalculated(satisfaction: Bool, index: USize, state: USize) =>
-        _cellPosState.push((index, state))
+    be localSatisfactionCalculated(index: USize, state: USize, satisfaction: Bool) =>
+        _cellPosState.push((index, state, satisfaction))
+
+        if state == 0 then _emptyCells.push((index, state)) end
 
         _counter = _counter + 1
 
         if(_counter == _numCells) then 
-            let tempCopyCellStates: Array[(USize, USize)] iso = Array[(USize, USize)](_numCells)
+            let tempCopyCellStates:  Array[(USize, USize, Bool)] iso = createSendableCopy()
+            let tempEmptyCellStates: Array[(USize, USize)]       iso = createSendableEmpty()
 
-            for value in _cellPosState.values() do 
-                tempCopyCellStates.push(value)
-            end
-
+            _coordinator.schellingUpdate(consume tempCopyCellStates, consume tempEmptyCellStates)
             _counter = 0
-            _coordinator.cellStatesUpdated(consume tempCopyCellStates)
+            
         end
 
-    be localCellStatesCalculated(changed: Bool, index: USize, state: USize) =>
-        _cellPosState.push((index, state))
+    // be localCellStatesCalculated(changed: Bool, index: USize, state: USize) =>
+    //     _cellPosState.push((index, state))
 
-        _counter = _counter + 1
+    //     _counter = _counter + 1
 
-        if(_counter == _numCells) then 
-            let tempCopyCellStates: Array[(USize, USize)] iso = Array[(USize, USize)](_numCells)
+    //     if(_counter == _numCells) then 
+    //         let tempCopyCellStates: Array[(USize, USize)] iso = createSendableCopy()
 
-            for value in _cellPosState.values() do 
-                tempCopyCellStates.push(value)
+    //         _counter = 0
+    //         _coordinator.cellStatesUpdated(consume tempCopyCellStates)
+    //     end
+
+    fun createSendableCopy(): Array[(USize, USize, Bool)] iso^ =>
+        let tempCopyCellStates: Array[(USize, USize, Bool)] iso = Array[(USize, USize, Bool)](_numCells)
+
+        for value in _cellPosState.values() do 
+            tempCopyCellStates.push(value)
+        end
+
+        tempCopyCellStates
+
+    fun createSendableEmpty(): Array[(USize, USize)] iso^ =>
+        let tempCopyCellStates: Array[(USize, USize)] iso = Array[(USize, USize)](_numCells)
+
+        for value in _emptyCells.values() do 
+            tempCopyCellStates.push(value)
+        end
+
+        tempCopyCellStates
+
+    fun ref changeLocalStates(globalCellStates: Array[USize] val) =>
+        for cell in _cells.values() do
+            try 
+                let position = cell._2.getPosition()
+                let status   = globalCellStates(position)?
+
+                cell._2.setStatus(status)
             end
-
-            _counter = 0
-            _coordinator.cellStatesUpdated(consume tempCopyCellStates)
+            
         end

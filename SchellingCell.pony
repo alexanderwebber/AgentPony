@@ -24,7 +24,7 @@ class SchellingCell
             end
         end
 
-        if (_status == 1) and ((_status == 2) and (numDiffNeighbors > _threshhold)) then 
+        if ((_status == 1) or (_status == 2)) and (numDiffNeighbors > _threshhold) then 
             _satisfied = false
         else
             _satisfied = true
@@ -34,4 +34,11 @@ class SchellingCell
         let sendableStatus:         USize = recover val _status      end
         let sendableSatisfaction:   Bool  = recover val _satisfied   end
 
-        sim.localSatisfactionCalculated(sendableSatisfaction, sendablePosition, sendableStatus)
+        sim.localSatisfactionCalculated(sendablePosition, sendableStatus, sendableSatisfaction)
+
+    fun ref setStatus(status': USize) =>
+        _status   = status'
+
+    fun getPosition(): USize =>
+        let sendablePosition: USize = recover val _position end
+        sendablePosition

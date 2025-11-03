@@ -6,7 +6,7 @@ trait PrintBoard
     fun     numCells():   USize
     fun     sideLength(): USize
     fun ref file():       File
-    fun ref cellStates(): Array[USize]
+    fun ref cellStates(): Array[(USize, Bool)]
 
     fun ref printBoard() =>
             file().print("epoch" 
@@ -15,7 +15,7 @@ trait PrintBoard
                     + ":")
 
             for i in Range(0, numCells()) do
-                let state = try cellStates()(i)? end
+                let state = try cellStates()(i)?._1 end
 
                 if ((i % (sideLength())) == (sideLength() - 1)) and (i != 0) then 
                     file().print(state.string())

@@ -8,12 +8,12 @@ trait Initialization is (PrintBoard & CountingHandler)
     fun     numPartitions(): USize
     fun     outputToFile():  Bool
     fun     out():           OutStream
-    fun ref cellStates():    Array[USize]
+    fun ref cellStates():    Array[(USize, Bool)]
     fun ref partitions():    Array[SimulationSpace]
 
     fun ref loadZeros() =>
         for index in Range(0, numCells()) do
-            cellStates().push(0)
+            cellStates().push((0, true))
         end
 
     fun ref partitionSimulationSpace(coordinator: Coordinator ref) =>
