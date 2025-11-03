@@ -44,4 +44,7 @@ class Cell
         let sendableStatus:   USize = recover val _status   end
 
         sim.localCellStatesCalculated(_changed, sendablePosition, sendableStatus)
+
+    fun getState():    USize => _status
+    fun getPosition(): USize => _position
         
