@@ -71,7 +71,6 @@ actor Coordinator is Initialization
                 partition._2.initCells()
             end
         end
-        
 
     fun     epoch():                  USize                           => _epoch
     fun     numCells():               USize                           => _numCells
@@ -80,13 +79,10 @@ actor Coordinator is Initialization
     fun     counter():                USize                           => _counter
     fun     timeSteps():              USize                           => _timeSteps
     fun     outputToFile():           Bool                            => _outputToFile
-    fun ref rand():                   U64                             => _rand.int_unbiased(2)
+    fun ref rand():                   XorOshiro128Plus                => _rand
     fun     out():                    OutStream                       => _env.out
     fun ref file():                   File                            => _file
     fun ref cellStates():             Array[Array[USize]]             => _cellStates
     fun ref partitions():             Array[(USize, SimulationSpace)] => _partitions
     fun ref updateEpoch(v: USize):    USize                           => _epoch   = v
     fun ref updateCounter(v: USize):  USize                           => _counter = v
-        
-        
-        

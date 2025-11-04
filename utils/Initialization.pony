@@ -10,7 +10,7 @@ trait Initialization is (PrintBoard & CountingHandler & EpochHandler)
     fun     numPartitions(): USize
     fun     outputToFile():  Bool
     fun     out():           OutStream
-    fun ref rand():          U64
+    fun ref rand():          XorOshiro128Plus
     fun ref cellStates():    Array[Array[USize]]
     fun ref partitions():    Array[(USize, SimulationSpace)]
 
@@ -40,8 +40,9 @@ trait Initialization is (PrintBoard & CountingHandler & EpochHandler)
                 for k in Range(0, sideLengthPerPartition) do
                     var index: USize val = startIndex
 
-                    for l in Range(0, sideLengthPerPartition) do                         
-                        if(rand() == 1) then 
+                    for l in Range(0, sideLengthPerPartition) do
+                        let randStatus = rand().int_unbiased(2)                       
+                        if(randStatus == 1) then 
                             indices.push((index, 1))
                         else
                             indices.push((index, 0))

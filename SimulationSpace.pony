@@ -39,7 +39,7 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
         _epoch                 = 0
         _partitionCounter      = 0
 
-        _cells                 = Array[(USize, Cell, USize, Array[USize])](_numCells)
+        _cells                 = Array[(USize, Cell, USize, Array[USize])](_totalCells)
         _cellPosState          = Array[(USize, USize)](_numCells)
         _nextCellPosState      = Array[(USize, USize)](_numCells)
         _neighboringPartitions = Array[SimulationSpace]
@@ -64,7 +64,7 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
 
             for neighbor in cell._4.values() do
                 for posState in _cellPosState.values() do 
-                    if posState._1 == neighbor then 
+                    if posState._1 == neighbor then
                         cellNeighborStatuses.push(posState._2)
                     end
                 end
@@ -108,9 +108,18 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
         end
 
     be collectNeighborCellPositionsStates(epoch': USize, ghostCells: Array[(USize, USize)] val) =>
-        _partitionCounter = _partitionCounter + 1
-
-        _cellPosState.append(ghostCells)
+        if epoch' != _epoch then 
+            this.collectNeighborCellPositionsStates(epoch', ghostCells)
+        else
+            _partitionCounter = _partitionCounter + 1
+            
+            for cell in ghostCells.values() do
+                if(_cellPosState.contains(cell) == false) then
+                    _cellPosState.push(cell)
+                end
+            end
+        end
+        
 
         if _partitionCounter == _neighboringPartitions.size() then 
             _partitionCounter = 0
