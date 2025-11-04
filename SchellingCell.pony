@@ -19,7 +19,7 @@ class SchellingCell
         var numDiffNeighbors: USize         = 0
 
         for status in statuses.values() do
-            if status != _status then
+            if (status != _status) and (status != 0) then
                 numDiffNeighbors = numDiffNeighbors + 1
             end
         end

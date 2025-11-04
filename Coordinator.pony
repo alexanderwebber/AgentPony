@@ -90,13 +90,12 @@ actor Coordinator is Initialization
                 if cellStates'(i)?._2 == false then 
                     let randPosition = _rand.int_unbiased(emptyCells'.size().u64())
 
-                    
                     let swapIndex = emptyCells'(randPosition.usize())?._1
 
                     cellStates'.update(swapIndex, (cellStates'(i)?._1, true))?
                     cellStates'.update(i, (0, true))?
 
-                    _emptyCells.delete(swapIndex)?
+                    _emptyCells.delete(randPosition.usize())?
                 end
             end
         end

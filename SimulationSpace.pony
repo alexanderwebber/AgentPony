@@ -52,13 +52,13 @@ actor SimulationSpace
 
             match randStatus
             | 0 =>
-                _cells.push((index, SchellingCell(index, 0, 3, _out), 0, cellNeighborPositions))
+                _cells.push((index, SchellingCell(index, 0, 2, _out), 0, cellNeighborPositions))
                 _cellPosState.push((index, 0, true))
             | 1 =>
-                _cells.push((index, SchellingCell(index, 1, 3, _out), 1, cellNeighborPositions))
+                _cells.push((index, SchellingCell(index, 1, 2, _out), 1, cellNeighborPositions))
                 _cellPosState.push((index, 1, true))
             else
-                _cells.push((index, SchellingCell(index, 2, 3, _out), 2, cellNeighborPositions))
+                _cells.push((index, SchellingCell(index, 2, 2, _out), 2, cellNeighborPositions))
                 _cellPosState.push((index, 2, true))
             end
         end

@@ -4,10 +4,11 @@ import shutil
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import ffmpeg
 
 FRAME_DIR   = "temp_frames"
-OUTPUT_FILE = "game_of_life_animation.mp4"
+OUTPUT_FILE = "schelling_animation.mp4"
 FRAME_RATE  = 2
 
 def parse_simulation_file(filepath):
@@ -38,6 +39,7 @@ def parse_simulation_file(filepath):
             if row:
                 grid.append(row)
 
+        if grid:  # Only append if grid has content
             grids.append(np.array(grid, dtype=np.uint8))
             
     return grids
@@ -49,6 +51,26 @@ def create_frames(grids, frame_dir):
     DPI                   = 100.0
     BASE_CELL_SIZE_INCHES = 20 / DPI
     
+    # Detect the number of unique states in the data
+    all_values = set()
+    for grid in grids:
+        all_values.update(np.unique(grid))
+    num_states = len(all_values)
+    max_value = max(all_values) if all_values else 2
+    
+    print(f"Detected {num_states} unique states: {sorted(all_values)}")
+    
+    # Create a discrete colormap for three states
+    # State 0 (empty): white
+    # State 1 (group 1): blue
+    # State 2 (group 2): red
+    # Can be extended to more states if needed
+    colors = ['white', 'blue', 'red', 'green', 'orange', 'purple', 'yellow', 'cyan']
+    n_colors = max(max_value + 1, 3)  # At least 3 colors
+    cmap = mcolors.ListedColormap(colors[:n_colors])
+    bounds = list(range(n_colors + 1))
+    norm = mcolors.BoundaryNorm(bounds, cmap.N)
+    
     for i, grid in enumerate(grids):
         frame_path    = os.path.join(frame_dir, f"frame_{i:04d}.png")
         height, width = grid.shape
@@ -58,7 +80,13 @@ def create_frames(grids, frame_dir):
         
         plt.figure(figsize=(fig_width, fig_height), dpi=DPI)
         
-        plt.imshow(grid, cmap='gray_r', interpolation='nearest')
+        # Use the discrete colormap with normalization
+        plt.imshow(grid, cmap=cmap, norm=norm, interpolation='nearest')
+        
+        # Add a colorbar to show what each color represents
+        cbar = plt.colorbar(ticks=range(n_colors), fraction=0.046, pad=0.04)
+        cbar.set_label('State', rotation=270, labelpad=15)
+        cbar.ax.invert_yaxis()  # Flip so 0 is at bottom, higher values at top
         
         plt.title(f"Epoch {i} (Grid: {width}x{height})")
         plt.xticks([])
