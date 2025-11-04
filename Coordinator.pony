@@ -10,11 +10,13 @@ actor Coordinator is Initialization
     let _timeSteps:          USize
     let _numPartitions:      USize
     let _numCells:           USize
+    let _simulationType:     String
     var _cellCounter:        USize
     var _counter:            USize
     var _epoch:              USize
     var _simEnd:             Bool
     let _outputToFile:       Bool
+    var _partitionsReady: USize
 
     let _rand:               Rand
     let _file:               File
@@ -22,22 +24,27 @@ actor Coordinator is Initialization
     
     let _partitions:         Array[SimulationSpace]
     let _cellStates:         Array[(USize, Bool)]
+    let _gofCellStates:      Array[USize]
     let _emptyCells:         Array[(USize, USize)]
 
     let _activityReports:    Array[USize]
+    let _activeCellIndices:  Array[Array[USize]]
     var _rebalanceCounter:   USize
     let _rebalanceInterval:  USize
     let _imbalanceThreshold: F64
 
-    new create(sideLength': USize, timeSteps': USize, numPartitions': USize, outputToFile': Bool, env': Env, file': File iso) =>
+    new create(sideLength': USize, timeSteps': USize, numPartitions': USize, 
+               simulationType': String, outputToFile': Bool, env': Env, file': File iso) =>
         _sideLength         = sideLength'
         _timeSteps          = timeSteps'
         _numPartitions      = numPartitions'
         _numCells           = _sideLength * _sideLength
+        _simulationType     = simulationType'
 
         _cellCounter        = 0
         _epoch              = 0
         _counter            = 0
+        _partitionsReady    = 0
         _simEnd             = false
         _outputToFile       = outputToFile'
         _rand               = Rand.from_u64(Time.nanos())
@@ -46,19 +53,54 @@ actor Coordinator is Initialization
         
         _partitions         = Array[SimulationSpace](_numPartitions)
         _cellStates         = Array[(USize, Bool)](_numCells)
+        _gofCellStates      = Array[USize](_numCells)
         _emptyCells         = Array[(USize, USize)](_numCells)
 
         _activityReports    = Array[USize](_numPartitions)
+        _activeCellIndices  = Array[Array[USize]](_numPartitions) 
         _rebalanceCounter   = 0
         _rebalanceInterval  = 20 
         _imbalanceThreshold = 0.3
 
     be startSimulation() =>
         partitionSimulationSpace(this)
-        loadZeros()
+        
+        if _simulationType == "gameoflife" then
+            loadZerosGoF()
+        else
+            loadZeros()
+        end
 
         for partition in _partitions.values() do 
             partition.initStates()
+        end
+
+    be gameOfLifeUpdate(cellStates': Array[(USize, USize)] iso) =>
+        let cellStatesUpdate: Array[(USize, USize)] = consume cellStates'
+        
+        for (idx, state) in cellStatesUpdate.pairs() do
+            try _gofCellStates.update(cellStatesUpdate(idx)?._1, cellStatesUpdate(idx)?._2)? end
+        end
+
+        incrementCounter()
+
+        if((_counter == _numPartitions) and (_simEnd == false)) then
+            incrementEpoch()
+            resetCounter()
+
+            if(_outputToFile) then printBoardGoF() end
+
+            if (_epoch % _rebalanceInterval) == 0 then
+                checkAndRebalance()
+            end
+
+            if(_epoch == _timeSteps) then finish() end
+
+            let tempCopyCellStates: Array[USize] val = recover val createSendableCopyGoF() end
+
+            for sim in _partitions.values() do
+                sim.simStep(tempCopyCellStates)
+            end
         end
 
     be schellingUpdate(cellPosStates': Array[(USize, USize, Bool)] iso, emptyLocations': Array[(USize, USize)] iso) =>
@@ -83,19 +125,17 @@ actor Coordinator is Initialization
 
             if(_outputToFile) then printBoard() end
 
-            if(_epoch == _timeSteps) then finish() end
-
             if (_epoch % _rebalanceInterval) == 0 then
                 checkAndRebalance()
             end
+
+            if(_epoch == _timeSteps) then finish() end
 
             let tempCopyCellStates: Array[USize] val = recover val createSendableCopy() end
 
             for sim in _partitions.values() do
                 sim.simStep(tempCopyCellStates)
             end
-
-            
         end
 
     fun ref swapUnsatisfied(cellStates': Array[(USize, Bool)], emptyCells': Array[(USize, USize)]) =>
@@ -103,7 +143,6 @@ actor Coordinator is Initialization
             try
                 if cellStates'(i)?._2 == false then 
                     let randPosition = _rand.int_unbiased(emptyCells'.size().u64())
-
                     let swapIndex = emptyCells'(randPosition.usize())?._1
 
                     cellStates'.update(swapIndex, (cellStates'(i)?._1, true))?
@@ -123,16 +162,44 @@ actor Coordinator is Initialization
 
         tempCopyCellStates
 
+    fun createSendableCopyGoF(): Array[USize] iso^ =>
+        let tempCopyCellStates: Array[USize] iso = Array[USize](_numCells)
+
+        for value in _gofCellStates.values() do 
+            tempCopyCellStates.push(value)
+        end
+
+        tempCopyCellStates
+
+    fun ref printBoardGoF() =>
+        file().print("epoch_" + _epoch.string() + ":")
+        
+        for i in Range(0, _numCells) do
+            try
+                let state = _gofCellStates(i)?
+                
+                if ((i % _sideLength) == (_sideLength - 1)) and (i != 0) then 
+                    file().print(state.string())
+                else
+                    file().write(state.string() + " ")
+                end
+            end
+        end
+        
+        file().print(" ")
+
     fun ref checkAndRebalance() =>
         _activityReports.clear()
+        _activeCellIndices.clear()
         _rebalanceCounter = 0
 
         for (idx, partition) in _partitions.pairs() do
             partition.reportActivity(idx, this)
         end
 
-    be receiveActivityReport(partitionId: USize, activeCount: USize) =>
+    be receiveActivityReport(partitionId: USize, activeCount: USize, activeIndices: Array[USize] iso) =>
         _activityReports.push(activeCount)
+        _activeCellIndices.push(consume activeIndices)
         _rebalanceCounter = _rebalanceCounter + 1
         
         if _rebalanceCounter == _numPartitions then
@@ -159,55 +226,54 @@ actor Coordinator is Initialization
         let stdDev = (varianceSum / _activityReports.size().f64()).sqrt()
         let cv     = if mean > 0 then stdDev / mean else F64(0) end
         
-        _env.out.print("Epoch " + _epoch.string() + " - Active cells per partition: " + 
-                      "mean=" + mean.string() + ", CV=" + cv.string())
-        
         if cv > _imbalanceThreshold then
-            _env.out.print("  -> Imbalance detected! Rebalancing...")
             performRebalancing()
         end
 
-    fun ref performRebalancing() =>
-        let activeCells: Array[USize] = Array[USize]
+    be partitionReady() =>
+        _partitionsReady = _partitionsReady + 1
         
-        for (idx, state) in _cellStates.pairs() do
-            if state._1 != 0 then
-                activeCells.push(idx)
+        if _partitionsReady == _numPartitions then
+            _partitionsReady = 0
+            
+            let tempCopyCellStates: Array[USize] val = recover val createSendableCopyGoF() end
+            
+            for sim in _partitions.values() do
+                sim.simStep(tempCopyCellStates)
             end
         end
-        
-        if activeCells.size() == 0 then return end
-        
-        let cellsPerPartition: USize = activeCells.size() / _numPartitions
-        let remainder: USize = activeCells.size() % _numPartitions
-        
-        _env.out.print("  Redistributing " + activeCells.size().string() + 
-                      " active cells across " + _numPartitions.string() + " partitions")
+
+    fun ref performRebalancing() =>
+        let cellsPerPartition: USize = _numCells / _numPartitions
+        let remainder: USize = _numCells % _numPartitions
         
         _partitions.clear()
         
         var startIdx: USize = 0
         for p in Range[USize](0, _numPartitions) do
             let extraCell: USize = if p < remainder then USize(1) else USize(0) end
-            let endIdx:    USize = startIdx + cellsPerPartition + extraCell
+            let count: USize = cellsPerPartition + extraCell
             
             let partitionIndices: Array[USize val] iso = recover iso Array[USize val] end
             
-            for i in Range[USize](startIdx, endIdx.min(activeCells.size())) do
-                try partitionIndices.push(activeCells(i)?) end
+            for i in Range[USize](startIdx, startIdx + count) do
+                partitionIndices.push(i)
             end
             
-            let localSideLength: USize = partitionIndices.size()
-            let sim                    = SimulationSpace(localSideLength, _sideLength, _numCells, _env.out, this, consume partitionIndices)
+            let localSideLength: USize = (count.f64().sqrt().ceil()).usize()
+            let sim = SimulationSpace(localSideLength, _sideLength, _numCells, _simulationType, 
+                                    _env.out, this, consume partitionIndices)
             _partitions.push(sim)
             
-            startIdx = endIdx
+            startIdx = startIdx + count
         end
         
-        _env.out.print("  Rebalancing complete. New partition size: ~" + cellsPerPartition.string())
+        _partitionsReady = 0
+        
+        let currentGlobalState: Array[USize] val = recover val createSendableCopyGoF() end
         
         for partition in _partitions.values() do
-            partition.initStates()
+            partition.initStatesWithCurrentState(currentGlobalState)
         end
 
     fun     epoch():                  USize                  => _epoch
@@ -215,14 +281,13 @@ actor Coordinator is Initialization
     fun     sideLength():             USize                  => _sideLength
     fun     numPartitions():          USize                  => _numPartitions
     fun     counter():                USize                  => _counter
+    fun     simulationType():         String                 => _simulationType
     fun     outputToFile():           Bool                   => _outputToFile
     fun     out():                    OutStream              => _env.out
     fun ref file():                   File                   => _file
     fun ref cellStates():             Array[(USize, Bool)]   => _cellStates
+    fun ref gofCellStates():          Array[USize]           => _gofCellStates
     fun ref partitions():             Array[SimulationSpace] => _partitions
     fun ref finish()                                         => _simEnd  = true
     fun ref updateEpoch(v: USize):    USize                  => _epoch   = v
     fun ref updateCounter(v: USize):  USize                  => _counter = v
-        
-        
-        

@@ -11,6 +11,7 @@ actor SimulationSpace
     let _globalSideLength: USize val
     let _numCells:         USize val
     let _totalCells:       USize val
+    let _simulationType:   String
     var _counter:          USize
 
     let _coordinator:      Coordinator
@@ -18,30 +19,60 @@ actor SimulationSpace
     let _out:              OutStream
 
     let _cells:            Array[(USize, SchellingCell, USize, Array[USize])]
+    let _gofCells:         Array[(USize, Cell, USize, Array[USize])]
     let _emptyCells:       Array[(USize, USize)]
     let _inactiveCells:    Array[USize]
     let _indices:          Array[USize val]
     let _cellPosState:     Array[(USize, USize, Bool)]
+    let _gofCellStates:    Array[(USize, USize)]
 
-    new create(sideLength': USize, globalSideLength': USize, totalCells': USize, out': OutStream, coordinator': Coordinator, indices': Array[USize val] iso) =>
+    new create(sideLength': USize, globalSideLength': USize, totalCells': USize, 
+               simulationType': String, out': OutStream, coordinator': Coordinator, 
+               indices': Array[USize val] iso) =>
         _sideLength       = recover val sideLength' end
         _globalSideLength = globalSideLength'
         _indices          = consume indices'
         _numCells         = _sideLength * _sideLength
         _totalCells       = totalCells'
+        _simulationType   = simulationType'
         _counter          = 0
 
         _cells            = Array[(USize, SchellingCell, USize, Array[USize])](_numCells)
+        _gofCells         = Array[(USize, Cell, USize, Array[USize])](_numCells)
         _cellPosState     = Array[(USize, USize, Bool)](_numCells)
+        _gofCellStates    = Array[(USize, USize)](_numCells)
         _emptyCells       = Array[(USize, USize)](_numCells)
         _inactiveCells    = Array[USize](_numCells)
 
         _rand             = Rand.from_u64(Time.nanos())
         _out              = out'
-
         _coordinator      = coordinator'
         
     be initStates() =>
+        if _simulationType == "gameoflife" then
+            initGameOfLife()
+        else
+            initSchelling()
+        end
+
+        be initGameOfLife() =>
+        for index in _indices.values() do
+            let randStatus: USize = _rand.int_unbiased(2).usize()
+            let cellNeighborPositions: Array[USize] = Array[USize](8)
+
+            for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
+                let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, index, _globalSideLength)
+                cellNeighborPositions.push(neighbor)
+            end
+
+            _gofCells.push((index, Cell(index, randStatus, _out), randStatus, cellNeighborPositions))
+            _gofCellStates.push((index, randStatus))
+        end
+
+        let tempCopyCellStates: Array[(USize, USize)] iso = createSendableCopyGoF()
+        _coordinator.gameOfLifeUpdate(consume tempCopyCellStates)
+
+    be initSchelling() =>
         for index in _indices.values() do
             let randStatus                          = _rand.int_unbiased(3)
             let cellNeighborPositions: Array[USize] = Array[USize](8)
@@ -49,7 +80,6 @@ actor SimulationSpace
 
             for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
                 let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, index, _globalSideLength)
-                
                 cellNeighborPositions.push(neighbor)
             end
 
@@ -72,6 +102,27 @@ actor SimulationSpace
         _coordinator.schellingUpdate(consume tempCopyCellStates, consume tempEmptyCellStates)
 
     be simStep(globalCellStates: Array[USize] val) =>
+        if _simulationType == "gameoflife" then
+            simStepGameOfLife(globalCellStates)
+        else
+            simStepSchelling(globalCellStates)
+        end
+
+    be simStepGameOfLife(globalCellStates: Array[USize] val) =>
+        for cell in _gofCells.values() do
+            let cellNeighborStatuses: Array[USize] iso = Array[USize](8)
+
+            for neighbor in cell._4.values() do
+                try
+                    let neighborStatus: USize = globalCellStates(neighbor)? 
+                    cellNeighborStatuses.push(neighborStatus)
+                end
+            end
+
+            cell._2.updateStatus(consume cellNeighborStatuses, this)
+        end
+
+    be simStepSchelling(globalCellStates: Array[USize] val) =>
         changeLocalStates(globalCellStates)
 
         for cell in _cells.values() do
@@ -80,12 +131,35 @@ actor SimulationSpace
             for neighbor in cell._4.values() do
                 try
                     let neighborStatus: USize = globalCellStates(neighbor)? 
-                
                     cellNeighborStatuses.push(neighborStatus)
                 end
             end
 
             cell._2.updateStatus(consume cellNeighborStatuses, this)
+        end
+
+    be localCellStatesCalculated(changed: Bool, position: USize, status: USize, inactive: Bool) =>
+        let wasInactive = _inactiveCells.contains(position)
+    
+        if inactive and (not wasInactive) then
+            _inactiveCells.push(position)
+        elseif (not inactive) and wasInactive then
+            try
+                let deleteIndex = _inactiveCells.find(position)?
+                _inactiveCells.delete(deleteIndex)?
+            end
+            _gofCellStates.push((position, status))
+            _counter = _counter + 1
+        elseif not inactive then
+            _gofCellStates.push((position, status))
+            _counter = _counter + 1
+        end
+
+        if _counter == (_numCells - _inactiveCells.size()) then
+            let tempCopyCellStates: Array[(USize, USize)] iso = createSendableCopyGoF()
+            _coordinator.gameOfLifeUpdate(consume tempCopyCellStates)
+            _counter = 0
+            _gofCellStates.clear()
         end
 
     be localSatisfactionCalculated(index: USize, state: USize, satisfaction: Bool, inactive: Bool) =>
@@ -107,20 +181,29 @@ actor SimulationSpace
             _counter = _counter + 1
         end
 
-    if _counter == (_numCells - _inactiveCells.size()) then 
-        let tempCopyCellStates:  Array[(USize, USize, Bool)] iso = createSendableCopy()
-        let tempEmptyCellStates: Array[(USize, USize)]       iso = createSendableEmpty()
+        if _counter == (_numCells - _inactiveCells.size()) then 
+            let tempCopyCellStates:  Array[(USize, USize, Bool)] iso = createSendableCopy()
+            let tempEmptyCellStates: Array[(USize, USize)]       iso = createSendableEmpty()
 
-        _coordinator.schellingUpdate(consume tempCopyCellStates, consume tempEmptyCellStates)
-        _counter = 0
-        _emptyCells.clear()
-        _cellPosState.clear()
-    end
+            _coordinator.schellingUpdate(consume tempCopyCellStates, consume tempEmptyCellStates)
+            _counter = 0
+            _emptyCells.clear()
+            _cellPosState.clear()
+        end
 
     fun createSendableCopy(): Array[(USize, USize, Bool)] iso^ =>
         let tempCopyCellStates: Array[(USize, USize, Bool)] iso = Array[(USize, USize, Bool)](_numCells)
 
         for value in _cellPosState.values() do 
+            tempCopyCellStates.push(value)
+        end
+
+        tempCopyCellStates
+
+    fun createSendableCopyGoF(): Array[(USize, USize)] iso^ =>
+        let tempCopyCellStates: Array[(USize, USize)] iso = Array[(USize, USize)](_numCells)
+
+        for value in _gofCellStates.values() do 
             tempCopyCellStates.push(value)
         end
 
@@ -137,7 +220,15 @@ actor SimulationSpace
 
     be reportActivity(partitionId: USize, coordinator: Coordinator) =>
         let activeCount: USize = _numCells - _inactiveCells.size()
-        coordinator.receiveActivityReport(partitionId, activeCount)
+        
+        let activeCellIndices: Array[USize] iso = Array[USize]
+        for index in _indices.values() do
+            if not _inactiveCells.contains(index) then
+                activeCellIndices.push(index)
+            end
+        end
+        
+        coordinator.receiveActivityReport(partitionId, activeCount, consume activeCellIndices)
 
     fun ref changeLocalStates(globalCellStates: Array[USize] val) =>
         for cell in _cells.values() do
@@ -147,5 +238,24 @@ actor SimulationSpace
 
                 cell._2.setStatus(status)
             end
-            
+        end
+
+    be initStatesWithCurrentState(globalState: Array[USize] val) =>
+        if _simulationType == "gameoflife" then
+            for index in _indices.values() do
+                let currentStatus: USize = try globalState(index)? else 0 end
+                let cellNeighborPositions: Array[USize] = Array[USize](8)
+
+                for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
+                    let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, index, _globalSideLength)
+                    cellNeighborPositions.push(neighbor)
+                end
+
+                _gofCells.push((index, Cell(index, currentStatus, _out), currentStatus, cellNeighborPositions))
+                _gofCellStates.push((index, currentStatus))
+            end
+
+            _coordinator.partitionReady()
+        else
+            initSchelling()
         end

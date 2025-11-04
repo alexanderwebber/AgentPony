@@ -2,18 +2,25 @@ use "collections"
 use "../../AgentPony"
 
 trait Initialization is (PrintBoard & CountingHandler)
-    fun     numCells():      USize
-    fun     sideLength():    USize
-    fun     counter():       USize
-    fun     numPartitions(): USize
-    fun     outputToFile():  Bool
-    fun     out():           OutStream
-    fun ref cellStates():    Array[(USize, Bool)]
-    fun ref partitions():    Array[SimulationSpace]
+    fun     numCells():       USize
+    fun     sideLength():     USize
+    fun     counter():        USize
+    fun     numPartitions():  USize
+    fun     simulationType(): String
+    fun     outputToFile():   Bool
+    fun     out():            OutStream
+    fun ref cellStates():     Array[(USize, Bool)]
+    fun ref gofCellStates():  Array[USize]
+    fun ref partitions():     Array[SimulationSpace]
 
     fun ref loadZeros() =>
         for index in Range(0, numCells()) do
             cellStates().push((0, true))
+        end
+    
+    fun ref loadZerosGoF() =>
+        for i in Range(0, numCells()) do
+            gofCellStates().push(0)
         end
 
     fun ref partitionSimulationSpace(coordinator: Coordinator ref) =>
@@ -39,7 +46,8 @@ trait Initialization is (PrintBoard & CountingHandler)
                     startIndex = startIndex + sideLength()
                 end
                 
-                partitions().push(SimulationSpace(sideLengthPerPartition, sideLength(), numCells(), out(), coordinator, consume indices))
+                partitions().push(SimulationSpace(sideLengthPerPartition, sideLength(), numCells(), 
+                                                  simulationType(), out(), coordinator, consume indices))
 
                 leftToRightIndex = leftToRightIndex + leftToRightCell
                 startIndex       = leftToRightIndex
