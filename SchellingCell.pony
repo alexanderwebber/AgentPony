@@ -37,7 +37,7 @@ class SchellingCell
             _satisfied = true
         end        
 
-        if (_previous == _satisfied) and (_status != 0) then 
+        if (_previous == _satisfied) and (_satisfied == true) and (_status != 0) then 
             _inactiveCounter = _inactiveCounter + 1
 
             if _inactiveCounter == 3 then 
@@ -62,10 +62,8 @@ class SchellingCell
             _previous = _satisfied
         end
 
-        
-
     fun ref setStatus(status': USize) =>
-        _status   = status'
+        _status = status'
 
     fun getPosition(): USize =>
         let sendablePosition: USize = recover val _position end

@@ -53,7 +53,7 @@ actor Coordinator is Initialization
 
     be schellingUpdate(cellPosStates': Array[(USize, USize, Bool)] iso, emptyLocations': Array[(USize, USize)] iso) =>
         let cellPosStates: Array[(USize, USize, Bool)] = consume cellPosStates'
-        let emptyCells:    Array[(USize, USize)] = consume emptyLocations'
+        let emptyCells:    Array[(USize, USize)]       = consume emptyLocations'
         
         for posState in cellPosStates.values() do 
             try _cellStates.update(posState._1, (posState._2, posState._3))? end
