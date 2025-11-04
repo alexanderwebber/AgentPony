@@ -12,16 +12,16 @@ actor Coordinator is Initialization
     let _numCells:      USize
     var _cellCounter:   USize
     var _counter:       USize
+    var _pCounter:      USize
     var _epoch:         USize
-    var _simEnd:        Bool
     let _outputToFile:  Bool
 
     let _rand:          Rand
     let _file:          File
     let _env:           Env
     
-    let _partitions:    Array[SimulationSpace]
-    let _cellStates:    Array[USize]
+    let _partitions:    Array[(USize, SimulationSpace)]
+    let _cellStates:    Array[Array[USize]]
 
     new create(sideLength': USize, timeSteps': USize, numPartitions': USize, outputToFile': Bool, env': Env, file': File iso) =>
         _sideLength    = sideLength'
@@ -32,66 +32,57 @@ actor Coordinator is Initialization
         _cellCounter   = 0
         _epoch         = 0
         _counter       = 0
-        _simEnd        = false
+        _pCounter      = 0
         _outputToFile  = outputToFile'
         _rand          = Rand.from_u64(Time.nanos())
         _file          = consume file'
         _env           = env'
         
-        _partitions    = Array[SimulationSpace](_numPartitions)
-        _cellStates    = Array[USize](_numCells)
+        _partitions    = Array[(USize, SimulationSpace)](_numPartitions)
+        _cellStates    = Array[Array[USize]](_timeSteps)
 
     be startSimulation() =>
         partitionSimulationSpace(this)
+        joinNeighboringPartitions()
         loadZeros()
 
-        for partition in _partitions.values() do 
-            partition.initStates()
-        end
-
-    be cellStatesUpdated(cellPosStates': Array[(USize, USize)] iso) =>
-        let cellPosStates: Array[(USize, USize)] = consume cellPosStates'
-        
+    be cellStatesUpdated(currentEpoch: USize, cellPosStates: Array[(USize, USize)] val) =>        
         for posState in cellPosStates.values() do 
-            try _cellStates.update(posState._1, posState._2)? end
+            try _cellStates(currentEpoch)?.update(posState._1, posState._2)? end
         end
 
-        incrementCounter()
+        if currentEpoch == _timeSteps then 
+            incrementCounter()
+        end
 
-        if((_counter == _numPartitions) and (_simEnd == false)) then 
-            incrementEpoch()
-            resetCounter()
-
-            if(_outputToFile) then printBoard() end
-
-            if(_epoch == _timeSteps) then finish() end
-
-            let tempCopyCellStates: Array[USize] iso = Array[USize](_numCells)
-
-            for value in _cellStates.values() do 
-                tempCopyCellStates.push(value)
-            end
-
-            let sendableCellStates: Array[USize] val = consume tempCopyCellStates
-
-            for sim in _partitions.values() do
-                sim.simStep(sendableCellStates)
+        if _counter == _numPartitions then 
+            if _outputToFile then 
+                printBoard()
             end
         end
 
-    fun     epoch():                  USize                  => _epoch
-    fun     numCells():               USize                  => _numCells
-    fun     sideLength():             USize                  => _sideLength
-    fun     numPartitions():          USize                  => _numPartitions
-    fun     counter():                USize                  => _counter
-    fun     outputToFile():           Bool                   => _outputToFile
-    fun     out():                    OutStream              => _env.out
-    fun ref file():                   File                   => _file
-    fun ref cellStates():             Array[USize]           => _cellStates
-    fun ref partitions():             Array[SimulationSpace] => _partitions
-    fun ref finish()                                         => _simEnd  = true
-    fun ref updateEpoch(v: USize):    USize                  => _epoch   = v
-    fun ref updateCounter(v: USize):  USize                  => _counter = v
-        
-        
-        
+    be initBarrier() =>
+        _pCounter = _pCounter + 1
+
+        if _pCounter == (_numPartitions * 8) then
+            _pCounter = 0
+
+            for partition in _partitions.values() do 
+                partition._2.initCells()
+            end
+        end
+
+    fun     epoch():                  USize                           => _epoch
+    fun     numCells():               USize                           => _numCells
+    fun     sideLength():             USize                           => _sideLength
+    fun     numPartitions():          USize                           => _numPartitions
+    fun     counter():                USize                           => _counter
+    fun     timeSteps():              USize                           => _timeSteps
+    fun     outputToFile():           Bool                            => _outputToFile
+    fun ref rand():                   XorOshiro128Plus                => _rand
+    fun     out():                    OutStream                       => _env.out
+    fun ref file():                   File                            => _file
+    fun ref cellStates():             Array[Array[USize]]             => _cellStates
+    fun ref partitions():             Array[(USize, SimulationSpace)] => _partitions
+    fun ref updateEpoch(v: USize):    USize                           => _epoch   = v
+    fun ref updateCounter(v: USize):  USize                           => _counter = v
