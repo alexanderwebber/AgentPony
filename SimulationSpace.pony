@@ -19,6 +19,7 @@ actor SimulationSpace
 
     let _cells:            Array[(USize, SchellingCell, USize, Array[USize])]
     let _emptyCells:       Array[(USize, USize)]
+    let _inactiveCells:    Array[USize]
     let _indices:          Array[USize val]
     let _cellPosState:     Array[(USize, USize, Bool)]
 
@@ -33,6 +34,7 @@ actor SimulationSpace
         _cells            = Array[(USize, SchellingCell, USize, Array[USize])](_numCells)
         _cellPosState     = Array[(USize, USize, Bool)](_numCells)
         _emptyCells       = Array[(USize, USize)](_numCells)
+        _inactiveCells    = Array[USize](_numCells)
 
         _rand             = Rand.from_u64(Time.nanos())
         _out              = out'
@@ -43,6 +45,7 @@ actor SimulationSpace
         for index in _indices.values() do
             let randStatus                          = _rand.int_unbiased(3)
             let cellNeighborPositions: Array[USize] = Array[USize](8)
+            let threshhold:            USize        = 2
 
             for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
                 let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, index, _globalSideLength)
@@ -52,13 +55,13 @@ actor SimulationSpace
 
             match randStatus
             | 0 =>
-                _cells.push((index, SchellingCell(index, 0, 2, _out), 0, cellNeighborPositions))
+                _cells.push((index, SchellingCell(index, 0, threshhold, _out), 0, cellNeighborPositions))
                 _cellPosState.push((index, 0, true))
             | 1 =>
-                _cells.push((index, SchellingCell(index, 1, 2, _out), 1, cellNeighborPositions))
+                _cells.push((index, SchellingCell(index, 1, threshhold, _out), 1, cellNeighborPositions))
                 _cellPosState.push((index, 1, true))
             else
-                _cells.push((index, SchellingCell(index, 2, 2, _out), 2, cellNeighborPositions))
+                _cells.push((index, SchellingCell(index, 2, threshhold, _out), 2, cellNeighborPositions))
                 _cellPosState.push((index, 2, true))
             end
         end
@@ -69,7 +72,6 @@ actor SimulationSpace
         _coordinator.schellingUpdate(consume tempCopyCellStates, consume tempEmptyCellStates)
 
     be simStep(globalCellStates: Array[USize] val) =>
-        _cellPosState.clear()
         changeLocalStates(globalCellStates)
 
         for cell in _cells.values() do
@@ -86,35 +88,34 @@ actor SimulationSpace
             cell._2.updateStatus(consume cellNeighborStatuses, this)
         end
 
-
-    be localSatisfactionCalculated(index: USize, state: USize, satisfaction: Bool) =>
-        _cellPosState.push((index, state, satisfaction))
-
+    be localSatisfactionCalculated(index: USize, state: USize, satisfaction: Bool, inactive: Bool) =>
         if state == 0 then _emptyCells.push((index, state)) end
 
-        _counter = _counter + 1
-
-        if(_counter == _numCells) then 
-            let tempCopyCellStates:  Array[(USize, USize, Bool)] iso = createSendableCopy()
-            let tempEmptyCellStates: Array[(USize, USize)]       iso = createSendableEmpty()
-
-            _coordinator.schellingUpdate(consume tempCopyCellStates, consume tempEmptyCellStates)
-            _counter = 0
-            _emptyCells.clear()
-            
+        let wasInactive = _inactiveCells.contains(index)
+    
+        if inactive and (not wasInactive) then
+            _inactiveCells.push(index)
+        elseif (not inactive) and wasInactive then
+            try
+                let deleteIndex = _inactiveCells.find(index)?
+                _inactiveCells.delete(deleteIndex)?
+            end
+            _cellPosState.push((index, state, satisfaction))
+            _counter = _counter + 1
+        elseif not inactive then
+            _cellPosState.push((index, state, satisfaction))
+            _counter = _counter + 1
         end
 
-    // be localCellStatesCalculated(changed: Bool, index: USize, state: USize) =>
-    //     _cellPosState.push((index, state))
+    if _counter == (_numCells - _inactiveCells.size()) then 
+        let tempCopyCellStates:  Array[(USize, USize, Bool)] iso = createSendableCopy()
+        let tempEmptyCellStates: Array[(USize, USize)]       iso = createSendableEmpty()
 
-    //     _counter = _counter + 1
-
-    //     if(_counter == _numCells) then 
-    //         let tempCopyCellStates: Array[(USize, USize)] iso = createSendableCopy()
-
-    //         _counter = 0
-    //         _coordinator.cellStatesUpdated(consume tempCopyCellStates)
-    //     end
+        _coordinator.schellingUpdate(consume tempCopyCellStates, consume tempEmptyCellStates)
+        _counter = 0
+        _emptyCells.clear()
+        _cellPosState.clear()
+    end
 
     fun createSendableCopy(): Array[(USize, USize, Bool)] iso^ =>
         let tempCopyCellStates: Array[(USize, USize, Bool)] iso = Array[(USize, USize, Bool)](_numCells)
