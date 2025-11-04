@@ -51,32 +51,6 @@ actor Coordinator is Initialization
             partition.initStates()
         end
 
-    // be cellStatesUpdated(cellPosStates': Array[(USize, USize)] iso) =>
-    //     let cellPosStates: Array[(USize, USize)] = consume cellPosStates'
-        
-    //     for posState in cellPosStates.values() do 
-    //         try _cellStates.update(posState._1, posState._2)? end
-    //     end
-
-    //     incrementCounter()
-
-    //     if((_counter == _numPartitions) and (_simEnd == false)) then 
-    //         incrementEpoch()
-    //         resetCounter()
-
-    //         if(_outputToFile) then printBoard() end
-
-    //         if(_epoch == _timeSteps) then finish() end
-
-    //         let tempCopyCellStates: Array[USize] iso = createSendableCopy()
-
-    //         let sendableCellStates: Array[USize] val = consume tempCopyCellStates
-
-    //         for sim in _partitions.values() do
-    //             sim.simStep(sendableCellStates)
-    //         end
-    //     end
-
     be schellingUpdate(cellPosStates': Array[(USize, USize, Bool)] iso, emptyLocations': Array[(USize, USize)] iso) =>
         let cellPosStates: Array[(USize, USize, Bool)] = consume cellPosStates'
         let emptyCells:    Array[(USize, USize)] = consume emptyLocations'
@@ -111,15 +85,21 @@ actor Coordinator is Initialization
         end
 
     fun ref swapUnsatisfied(cellStates': Array[(USize, Bool)], emptyCells': Array[(USize, USize)]) =>
-        for cell in cellStates'.values() do 
-            if cell._2 == false then 
-                let randPosition = _rand.int_unbiased(emptyCells'.size().u64())
+        for i in Range(0, cellStates'.size()) do
+            try
+                if cellStates'(i)?._2 == false then 
+                    let randPosition = _rand.int_unbiased(emptyCells'.size().u64())
 
-                try _env.out.print(emptyCells'(randPosition.usize())?._2.string()) end
+                    
+                    let swapIndex = emptyCells'(randPosition.usize())?._1
+
+                    cellStates'.update(swapIndex, (cellStates'(i)?._1, true))?
+                    cellStates'.update(i, (0, true))?
+
+                    _emptyCells.delete(swapIndex)?
+                end
             end
         end
-
-        _env.out.print("test")
 
     fun createSendableCopy(): Array[USize] iso^ =>
         let tempCopyCellStates: Array[USize] iso = Array[USize](_numCells)

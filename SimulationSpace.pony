@@ -70,7 +70,6 @@ actor SimulationSpace
 
     be simStep(globalCellStates: Array[USize] val) =>
         _cellPosState.clear()
-        _emptyCells.clear()
         changeLocalStates(globalCellStates)
 
         for cell in _cells.values() do
@@ -101,6 +100,7 @@ actor SimulationSpace
 
             _coordinator.schellingUpdate(consume tempCopyCellStates, consume tempEmptyCellStates)
             _counter = 0
+            _emptyCells.clear()
             
         end
 
