@@ -218,18 +218,6 @@ actor SimulationSpace
 
         tempCopyCellStates
 
-    be reportActivity(partitionId: USize, coordinator: Coordinator) =>
-        let activeCount: USize = _numCells - _inactiveCells.size()
-        
-        let activeCellIndices: Array[USize] iso = Array[USize]
-        for index in _indices.values() do
-            if not _inactiveCells.contains(index) then
-                activeCellIndices.push(index)
-            end
-        end
-        
-        coordinator.receiveActivityReport(partitionId, activeCount, consume activeCellIndices)
-
     fun ref changeLocalStates(globalCellStates: Array[USize] val) =>
         for cell in _cells.values() do
             try 
@@ -238,24 +226,4 @@ actor SimulationSpace
 
                 cell._2.setStatus(status)
             end
-        end
-
-    be initStatesWithCurrentState(globalState: Array[USize] val) =>
-        if _simulationType == "gameoflife" then
-            for index in _indices.values() do
-                let currentStatus: USize = try globalState(index)? else 0 end
-                let cellNeighborPositions: Array[USize] = Array[USize](8)
-
-                for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
-                    let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, index, _globalSideLength)
-                    cellNeighborPositions.push(neighbor)
-                end
-
-                _gofCells.push((index, Cell(index, currentStatus, _out), currentStatus, cellNeighborPositions))
-                _gofCellStates.push((index, currentStatus))
-            end
-
-            _coordinator.partitionReady()
-        else
-            initSchelling()
         end

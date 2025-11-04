@@ -90,10 +90,6 @@ actor Coordinator is Initialization
 
             if(_outputToFile) then printBoardGoF() end
 
-            if (_epoch % _rebalanceInterval) == 0 then
-                checkAndRebalance()
-            end
-
             if(_epoch == _timeSteps) then finish() end
 
             let tempCopyCellStates: Array[USize] val = recover val createSendableCopyGoF() end
@@ -124,10 +120,6 @@ actor Coordinator is Initialization
             _emptyCells.clear()
 
             if(_outputToFile) then printBoard() end
-
-            if (_epoch % _rebalanceInterval) == 0 then
-                checkAndRebalance()
-            end
 
             if(_epoch == _timeSteps) then finish() end
 
@@ -187,94 +179,6 @@ actor Coordinator is Initialization
         end
         
         file().print(" ")
-
-    fun ref checkAndRebalance() =>
-        _activityReports.clear()
-        _activeCellIndices.clear()
-        _rebalanceCounter = 0
-
-        for (idx, partition) in _partitions.pairs() do
-            partition.reportActivity(idx, this)
-        end
-
-    be receiveActivityReport(partitionId: USize, activeCount: USize, activeIndices: Array[USize] iso) =>
-        _activityReports.push(activeCount)
-        _activeCellIndices.push(consume activeIndices)
-        _rebalanceCounter = _rebalanceCounter + 1
-        
-        if _rebalanceCounter == _numPartitions then
-            analyzeAndRebalance()
-        end
-
-    fun ref analyzeAndRebalance() =>
-        if _activityReports.size() == 0 then return end
-        
-        var total: USize = 0
-        for count in _activityReports.values() do
-            total = total + count
-        end
-        
-        let mean: F64 = total.f64() / _activityReports.size().f64()
-        
-        var varianceSum: F64 = 0
-
-        for count in _activityReports.values() do
-            let diff    = count.f64() - mean
-            varianceSum = varianceSum + (diff * diff)
-        end
-        
-        let stdDev = (varianceSum / _activityReports.size().f64()).sqrt()
-        let cv     = if mean > 0 then stdDev / mean else F64(0) end
-        
-        if cv > _imbalanceThreshold then
-            performRebalancing()
-        end
-
-    be partitionReady() =>
-        _partitionsReady = _partitionsReady + 1
-        
-        if _partitionsReady == _numPartitions then
-            _partitionsReady = 0
-            
-            let tempCopyCellStates: Array[USize] val = recover val createSendableCopyGoF() end
-            
-            for sim in _partitions.values() do
-                sim.simStep(tempCopyCellStates)
-            end
-        end
-
-    fun ref performRebalancing() =>
-        let cellsPerPartition: USize = _numCells / _numPartitions
-        let remainder: USize = _numCells % _numPartitions
-        
-        _partitions.clear()
-        
-        var startIdx: USize = 0
-        for p in Range[USize](0, _numPartitions) do
-            let extraCell: USize = if p < remainder then USize(1) else USize(0) end
-            let count: USize = cellsPerPartition + extraCell
-            
-            let partitionIndices: Array[USize val] iso = recover iso Array[USize val] end
-            
-            for i in Range[USize](startIdx, startIdx + count) do
-                partitionIndices.push(i)
-            end
-            
-            let localSideLength: USize = (count.f64().sqrt().ceil()).usize()
-            let sim = SimulationSpace(localSideLength, _sideLength, _numCells, _simulationType, 
-                                    _env.out, this, consume partitionIndices)
-            _partitions.push(sim)
-            
-            startIdx = startIdx + count
-        end
-        
-        _partitionsReady = 0
-        
-        let currentGlobalState: Array[USize] val = recover val createSendableCopyGoF() end
-        
-        for partition in _partitions.values() do
-            partition.initStatesWithCurrentState(currentGlobalState)
-        end
 
     fun     epoch():                  USize                  => _epoch
     fun     numCells():               USize                  => _numCells
