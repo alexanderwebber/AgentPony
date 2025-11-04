@@ -84,8 +84,12 @@ def create_frames(grids, frame_dir):
         plt.imshow(grid, cmap=cmap, norm=norm, interpolation='nearest')
         
         # Add a colorbar to show what each color represents
-        cbar = plt.colorbar(ticks=range(n_colors), fraction=0.046, pad=0.04)
-        cbar.set_label('State', rotation=270, labelpad=15)
+        # Center ticks by placing them at 0.5, 1.5, 2.5, etc.
+        tick_positions = [i + 0.5 for i in range(n_colors)]
+        cbar = plt.colorbar(ticks=tick_positions, fraction=0.046, pad=0.04)
+        cbar.set_ticklabels(range(n_colors))
+        cbar.ax.tick_params(labelsize=14)  # Increase tick label font size
+        cbar.set_label('State', rotation=270, labelpad=15, fontsize=14)
         cbar.ax.invert_yaxis()  # Flip so 0 is at bottom, higher values at top
         
         plt.title(f"Epoch {i} (Grid: {width}x{height})")

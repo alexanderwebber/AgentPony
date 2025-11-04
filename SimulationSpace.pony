@@ -135,6 +135,10 @@ actor SimulationSpace
 
         tempCopyCellStates
 
+    be reportActivity(partitionId: USize, coordinator: Coordinator) =>
+        let activeCount: USize = _numCells - _inactiveCells.size()
+        coordinator.receiveActivityReport(partitionId, activeCount)
+
     fun ref changeLocalStates(globalCellStates: Array[USize] val) =>
         for cell in _cells.values() do
             try 
