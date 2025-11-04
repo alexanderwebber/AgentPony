@@ -79,9 +79,7 @@ actor Coordinator is Initialization
 
             for sim in _partitions.values() do
                 sim.simStep(tempCopyCellStates)
-            end
-
-            
+            end            
         end
 
     fun ref swapUnsatisfied(cellStates': Array[(USize, Bool)], emptyCells': Array[(USize, USize)]) =>
