@@ -1,6 +1,7 @@
 import sys
 from collections import defaultdict
 import matplotlib.pyplot as plt
+import numpy as np
 
 def parse_log(filename):
     stats = defaultdict(lambda: defaultdict(list))
@@ -16,30 +17,47 @@ def parse_log(filename):
     
     epochs = []
     avg_messages = []
+    std_errors = []
     
-    # Calculate averages per epoch, starting from epoch 2
+    # Calculate averages and standard errors per epoch, starting from epoch 2
     for epoch in sorted(stats.keys()):
         if epoch == 0 or epoch == 1:
             continue
-        total_msgs = sum(sum(msgs) for msgs in stats[epoch].values())
-        num_partitions = len(stats[epoch])
-        avg = total_msgs / num_partitions if num_partitions > 0 else 0
+        
+        # Collect all messages for this epoch across partitions
+        all_msgs = []
+        for msgs in stats[epoch].values():
+            all_msgs.extend(msgs)
+        
+        if len(all_msgs) > 0:
+            avg = np.mean(all_msgs)
+            # Standard error of the mean
+            std_err = np.std(all_msgs, ddof=1) / np.sqrt(len(all_msgs))
+        else:
+            avg = 0
+            std_err = 0
         
         epochs.append(epoch)
         avg_messages.append(avg)
+        std_errors.append(std_err)
     
-    return epochs, avg_messages
+    return epochs, avg_messages, std_errors
 
 def plot_comparison(file1, file2, label1='Baseline', label2='SendOnChange'):
-    epochs1, avg1 = parse_log(file1)
-    epochs2, avg2 = parse_log(file2)
+    epochs1, avg1, err1 = parse_log(file1)
+    epochs2, avg2, err2 = parse_log(file2)
     
     # Create plot
     plt.figure(figsize=(10, 6))
     
-    # Plot both lines
-    plt.plot(epochs1, avg1, linewidth=2, label=label1)
-    plt.plot(epochs2, avg2, linewidth=2, label=label2)
+    # Plot both lines with error bars - reduced error bar frequency and styling
+    errorevery = 5  # Show error bars every 5 epochs
+    plt.errorbar(epochs1, avg1, yerr=err1, linewidth=2, label=label1, 
+                 errorevery=errorevery, capsize=4, capthick=1.5, 
+                 elinewidth=1.5, alpha=0.8)
+    plt.errorbar(epochs2, avg2, yerr=err2, linewidth=2, label=label2, 
+                 errorevery=errorevery, capsize=4, capthick=1.5, 
+                 elinewidth=1.5, alpha=0.8)
     
     plt.xlabel('Epoch', fontsize=12)
     plt.ylabel('Average Messages per Partition', fontsize=12)
