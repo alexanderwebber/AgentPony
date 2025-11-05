@@ -95,7 +95,8 @@ actor Coordinator is Initialization
             let tempCopyCellStates: Array[USize] val = recover val createSendableCopyGoF() end
 
             for sim in _partitions.values() do
-                sim.simStep(tempCopyCellStates)
+                let sendableEpoch = recover val _epoch end
+                sim.simStep(tempCopyCellStates, sendableEpoch)
             end
         end
 
@@ -126,7 +127,8 @@ actor Coordinator is Initialization
             let tempCopyCellStates: Array[USize] val = recover val createSendableCopy() end
 
             for sim in _partitions.values() do
-                sim.simStep(tempCopyCellStates)
+                let sendableEpoch = recover val _epoch end
+                sim.simStep(tempCopyCellStates, sendableEpoch)
             end
         end
 
@@ -187,7 +189,7 @@ actor Coordinator is Initialization
     fun     counter():                USize                  => _counter
     fun     simulationType():         String                 => _simulationType
     fun     outputToFile():           Bool                   => _outputToFile
-    fun     out():                    OutStream              => _env.out
+    fun     env():                    Env                    => _env
     fun ref file():                   File                   => _file
     fun ref cellStates():             Array[(USize, Bool)]   => _cellStates
     fun ref gofCellStates():          Array[USize]           => _gofCellStates

@@ -5,6 +5,7 @@ use "promises"
 use "pony_test"
 use "./utils"
 use "./test"
+use "runtime_info"
 
 actor SimulationSpace
     let _sideLength:       USize val
@@ -13,10 +14,11 @@ actor SimulationSpace
     let _totalCells:       USize val
     let _simulationType:   String
     var _counter:          USize
+    var _messages:         USize
 
     let _coordinator:      Coordinator
     let _rand:             Rand
-    let _out:              OutStream
+    let _env:              Env
 
     let _cells:            Array[(USize, SchellingCell, USize, Array[USize])]
     let _gofCells:         Array[(USize, Cell, USize, Array[USize])]
@@ -27,7 +29,7 @@ actor SimulationSpace
     let _gofCellStates:    Array[(USize, USize)]
 
     new create(sideLength': USize, globalSideLength': USize, totalCells': USize, 
-               simulationType': String, out': OutStream, coordinator': Coordinator, 
+               simulationType': String, env': Env, coordinator': Coordinator, 
                indices': Array[USize val] iso) =>
         _sideLength       = recover val sideLength' end
         _globalSideLength = globalSideLength'
@@ -36,6 +38,7 @@ actor SimulationSpace
         _totalCells       = totalCells'
         _simulationType   = simulationType'
         _counter          = 0
+        _messages         = 0
 
         _cells            = Array[(USize, SchellingCell, USize, Array[USize])](_numCells)
         _gofCells         = Array[(USize, Cell, USize, Array[USize])](_numCells)
@@ -45,17 +48,28 @@ actor SimulationSpace
         _inactiveCells    = Array[USize](_numCells)
 
         _rand             = Rand.from_u64(Time.nanos())
-        _out              = out'
+        _env              = env'
         _coordinator      = coordinator'
         
+    be printStats(epoch: USize) =>
+        """
+        Print app message count for this SimulationSpace actor
+        """
+        let ampc = ActorStats.app_messages_processed_counter(ActorStatsAuth(_env.root))
+        let epochMessages = ampc - _messages
+        _messages = ampc
+        
+        // Format: STATS|Partition|Epoch|Messages
+        _env.out.print("ID|" + (digestof this).string() + "|" + epoch.string() + "|" + epochMessages.string())
+
     be initStates() =>
         if _simulationType == "gameoflife" then
             initGameOfLife()
         else
             initSchelling()
         end
-
-        be initGameOfLife() =>
+    
+    be initGameOfLife() =>
         for index in _indices.values() do
             let randStatus: USize = _rand.int_unbiased(2).usize()
             let cellNeighborPositions: Array[USize] = Array[USize](8)
@@ -65,7 +79,7 @@ actor SimulationSpace
                 cellNeighborPositions.push(neighbor)
             end
 
-            _gofCells.push((index, Cell(index, randStatus, _out), randStatus, cellNeighborPositions))
+            _gofCells.push((index, Cell(index, randStatus, _env.out), randStatus, cellNeighborPositions))
             _gofCellStates.push((index, randStatus))
         end
 
@@ -85,13 +99,13 @@ actor SimulationSpace
 
             match randStatus
             | 0 =>
-                _cells.push((index, SchellingCell(index, 0, threshhold, _out), 0, cellNeighborPositions))
+                _cells.push((index, SchellingCell(index, 0, threshhold, _env.out), 0, cellNeighborPositions))
                 _cellPosState.push((index, 0, true))
             | 1 =>
-                _cells.push((index, SchellingCell(index, 1, threshhold, _out), 1, cellNeighborPositions))
+                _cells.push((index, SchellingCell(index, 1, threshhold, _env.out), 1, cellNeighborPositions))
                 _cellPosState.push((index, 1, true))
             else
-                _cells.push((index, SchellingCell(index, 2, threshhold, _out), 2, cellNeighborPositions))
+                _cells.push((index, SchellingCell(index, 2, threshhold, _env.out), 2, cellNeighborPositions))
                 _cellPosState.push((index, 2, true))
             end
         end
@@ -101,7 +115,8 @@ actor SimulationSpace
 
         _coordinator.schellingUpdate(consume tempCopyCellStates, consume tempEmptyCellStates)
 
-    be simStep(globalCellStates: Array[USize] val) =>
+    be simStep(globalCellStates: Array[USize] val, epoch: USize) =>
+        printStats(epoch)
         if _simulationType == "gameoflife" then
             simStepGameOfLife(globalCellStates)
         else

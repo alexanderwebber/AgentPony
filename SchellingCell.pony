@@ -41,7 +41,7 @@ class SchellingCell
             _inactiveCounter = _inactiveCounter + 1
 
             if _inactiveCounter == 3 then 
-                _inactive = true    
+                _inactive = false    
             end
         else 
             _inactiveCounter = 0

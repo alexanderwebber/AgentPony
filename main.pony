@@ -6,7 +6,7 @@ actor Main
         let timeSteps:      USize  = try env.args(2)?.usize()? else 100          end
         let numPartitions:  USize  = try env.args(3)?.usize()? else 16           end
         let runNumber:      USize  = try env.args(4)?.usize()? else 0            end
-        let simulationType: String = try env.args(5)?          else "gameoflife" end
+        let simulationType: String = try env.args(5)?          else "schellings"  end
         let outputToFile:   Bool   = try env.args(6)?.bool()?  else true         end
 
         try

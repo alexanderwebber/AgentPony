@@ -8,7 +8,7 @@ trait Initialization is (PrintBoard & CountingHandler)
     fun     numPartitions():  USize
     fun     simulationType(): String
     fun     outputToFile():   Bool
-    fun     out():            OutStream
+    fun     env():            Env
     fun ref cellStates():     Array[(USize, Bool)]
     fun ref gofCellStates():  Array[USize]
     fun ref partitions():     Array[SimulationSpace]
@@ -47,7 +47,7 @@ trait Initialization is (PrintBoard & CountingHandler)
                 end
                 
                 partitions().push(SimulationSpace(sideLengthPerPartition, sideLength(), numCells(), 
-                                                  simulationType(), out(), coordinator, consume indices))
+                                                  simulationType(), env(), coordinator, consume indices))
 
                 leftToRightIndex = leftToRightIndex + leftToRightCell
                 startIndex       = leftToRightIndex
