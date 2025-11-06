@@ -33,8 +33,7 @@ actor Coordinator is Initialization
     let _rebalanceInterval:  USize
     let _imbalanceThreshold: F64
 
-    new create(sideLength': USize, timeSteps': USize, numPartitions': USize, 
-               simulationType': String, outputToFile': Bool, env': Env, file': File iso) =>
+    new create(sideLength': USize, timeSteps': USize, numPartitions': USize, simulationType': String, outputToFile': Bool, env': Env, file': File iso) =>
         _sideLength         = sideLength'
         _timeSteps          = timeSteps'
         _numPartitions      = numPartitions'

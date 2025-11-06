@@ -116,7 +116,7 @@ actor SimulationSpace
         _coordinator.schellingUpdate(consume tempCopyCellStates, consume tempEmptyCellStates)
 
     be simStep(globalCellStates: Array[USize] val, epoch: USize) =>
-        printStats(epoch)
+        //printStats(epoch)
         if _simulationType == "gameoflife" then
             simStepGameOfLife(globalCellStates)
         else
