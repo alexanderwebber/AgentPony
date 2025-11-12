@@ -23,6 +23,7 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
 
     let _cells:                 Array[(USize, Cell, USize, Array[USize])]
     let _neighboringPartitions: Array[SimulationSpace]
+    let _inactiveCells:         Array[USize]
     let _indices:               Array[(USize val, USize val)]
     let _cellPosState:          Array[(USize, USize)]
     let _nextCellPosState:      Array[(USize, USize)]
@@ -43,6 +44,7 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
         _cellPosState          = Array[(USize, USize)](_numCells)
         _nextCellPosState      = Array[(USize, USize)](_numCells)
         _neighboringPartitions = Array[SimulationSpace]
+        _inactiveCells         = Array[USize](_numCells)
 
         _rand                  = Rand.from_u64(Time.nanos())
         _out                   = out'
@@ -73,12 +75,24 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
             cell._2.updateStatus(consume cellNeighborStatuses, this)
         end
 
-    be localCellStatesCalculated(changed: Bool, index: USize, state: USize) =>
-        _nextCellPosState.push((index, state))
+    be localCellStatesCalculated(changed: Bool, position: USize, status: USize, inactive: Bool) =>
+        let wasInactive = _inactiveCells.contains(position)
+    
+        if inactive and (not wasInactive) then
+            _inactiveCells.push(position)
+        elseif (not inactive) and wasInactive then
+            try
+                let deleteIndex = _inactiveCells.find(position)?
+                _inactiveCells.delete(deleteIndex)?
+            end
+            _cellPosState.push((position, status))
+            incrementCounter()
+        elseif not inactive then
+            _cellPosState.push((position, status))
+            incrementCounter()
+        end
 
-        incrementCounter()
-
-        if(_counter == _numCells) then
+        if _counter == (_numCells - _inactiveCells.size()) then
             _cellPosState.clear()
             for value in _nextCellPosState.values() do 
                 _cellPosState.push(value)
@@ -97,7 +111,6 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
             end
 
             resetCounter()
-
         end
 
     be sendNeighbors() =>
@@ -156,7 +169,6 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
 
         let sendablePositionsStates: Array[(USize, USize)] val = consume tempCopyCellStates
         sendablePositionsStates
-
 
     fun     counter():               USize => _counter
     fun     epoch():                 USize => _epoch
