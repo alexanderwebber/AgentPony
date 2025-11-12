@@ -1,6 +1,6 @@
 use "collections"
 
-class SchellingCell
+actor SchellingCell
     var _position:   USize
     var _status:     USize
     var _threshhold: USize
@@ -14,7 +14,7 @@ class SchellingCell
         _satisfied  = true
         _out        = out'
 
-    fun ref updateStatus(neighborStatuses: Array[USize] iso, sim: SimulationSpace) =>
+    be updateStatus(neighborStatuses: Array[USize] iso, sim: SimulationSpace) =>
         let statuses:         Array[USize]  = consume neighborStatuses
         var numDiffNeighbors: USize         = 0
 
@@ -36,9 +36,5 @@ class SchellingCell
 
         sim.localSatisfactionCalculated(sendablePosition, sendableStatus, sendableSatisfaction)
 
-    fun ref setStatus(status': USize) =>
+    be setStatus(status': USize) =>
         _status   = status'
-
-    fun getPosition(): USize =>
-        let sendablePosition: USize = recover val _position end
-        sendablePosition

@@ -137,10 +137,9 @@ actor SimulationSpace
     fun ref changeLocalStates(globalCellStates: Array[USize] val) =>
         for cell in _cells.values() do
             try 
-                let position = cell._2.getPosition()
+                let position = cell._1
                 let status   = globalCellStates(position)?
 
                 cell._2.setStatus(status)
             end
-            
         end
