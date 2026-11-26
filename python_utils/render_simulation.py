@@ -4,11 +4,16 @@ import shutil
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import ffmpeg
 
-FRAME_DIR   = "temp_frames"
-OUTPUT_FILE = "game_of_life_animation.mp4"
-FRAME_RATE  = 2
+FRAME_DIR  = "temp_frames"
+FRAME_RATE = 2
+
+SIMULATIONS = {
+    "game_of_life": {"output_file": "game_of_life_animation.mp4", "colors": ['white', 'black']},
+    "schellings":   {"output_file": "schelling_animation.mp4",    "colors": ['white', 'blue', 'red']},
+}
 
 def parse_simulation_file(filepath):
     print(f"Parsing {filepath}...")
@@ -38,16 +43,22 @@ def parse_simulation_file(filepath):
             if row:
                 grid.append(row)
 
+        if grid:  # Only append if grid has content
             grids.append(np.array(grid, dtype=np.uint8))
             
     return grids
 
-def create_frames(grids, frame_dir):
+def create_frames(grids, frame_dir, colors):
     print(f"Creating frames in {frame_dir}...")
     os.makedirs(frame_dir, exist_ok=True)
     
     DPI                   = 100.0
     BASE_CELL_SIZE_INCHES = 20 / DPI
+    
+    n_colors = len(colors)
+    cmap = mcolors.ListedColormap(colors)
+    bounds = list(range(n_colors + 1))
+    norm = mcolors.BoundaryNorm(bounds, cmap.N)
     
     for i, grid in enumerate(grids):
         frame_path    = os.path.join(frame_dir, f"frame_{i:04d}.png")
@@ -58,7 +69,13 @@ def create_frames(grids, frame_dir):
         
         plt.figure(figsize=(fig_width, fig_height), dpi=DPI)
         
-        plt.imshow(grid, cmap='gray_r', interpolation='nearest')
+        # Use the discrete colormap with normalization
+        plt.imshow(grid, cmap=cmap, norm=norm, interpolation='nearest')
+        
+        # Add a colorbar to show what each color represents
+        cbar = plt.colorbar(ticks=range(n_colors), fraction=0.046, pad=0.04)
+        cbar.set_label('State', rotation=270, labelpad=15)
+        cbar.ax.invert_yaxis()  # Flip so 0 is at bottom, higher values at top
         
         plt.title(f"Epoch {i} (Grid: {width}x{height})")
         plt.xticks([])
@@ -107,6 +124,12 @@ def main():
         sys.exit(1)
         
     input_file = sys.argv[1]
+    simulation = next((name for name in SIMULATIONS if name in os.path.basename(input_file)), None)
+
+    if simulation is None:
+        print(f"Error: Cannot tell the simulation from the file name {input_file}.")
+        print(f"Expected one of {', '.join(SIMULATIONS)} in the name.")
+        sys.exit(1)
     
     try:
         grids = parse_simulation_file(input_file)
@@ -115,9 +138,9 @@ def main():
             print("No valid grids were parsed. Exiting.")
             return
 
-        create_frames(grids, FRAME_DIR)
+        create_frames(grids, FRAME_DIR, SIMULATIONS[simulation]["colors"])
         
-        create_video_with_library(FRAME_DIR, OUTPUT_FILE, FRAME_RATE)
+        create_video_with_library(FRAME_DIR, SIMULATIONS[simulation]["output_file"], FRAME_RATE)
         
     finally:
         if os.path.exists(FRAME_DIR):

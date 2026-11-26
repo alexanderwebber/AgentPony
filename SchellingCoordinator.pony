@@ -1,0 +1,129 @@
+use "collections"
+use "random"
+use "time"
+use "files"
+use "runtime_info"
+use "./utils"
+
+actor SchellingCoordinator is (CountingHandler & EpochHandler)
+    let _sideLength:    USize
+    let _timeSteps:     USize
+    let _numPartitions: USize
+    let _numCells:      USize
+    var _cellCounter:   USize
+    var _counter:       USize
+    var _epoch:         USize
+    var _simEnd:        Bool
+    let _outputToFile:  Bool
+
+    let _rand:          Rand
+    let _file:          File
+    let _env:           Env
+    
+    let _partitions:    Array[SchellingSpace]
+    let _cellStates:    Array[(USize, Bool)]
+    let _emptyCells:    Array[(USize, USize)]
+
+    new create(sideLength': USize, timeSteps': USize, numPartitions': USize, outputToFile': Bool, env': Env, file': File iso) =>
+        _sideLength    = sideLength'
+        _timeSteps     = timeSteps'
+        _numPartitions = numPartitions'
+        _numCells      = _sideLength * _sideLength
+
+        _cellCounter   = 0
+        _epoch         = 0
+        _counter       = 0
+        _simEnd        = false
+        _outputToFile  = outputToFile'
+        _rand          = Rand.from_u64(Time.nanos())
+        _file          = consume file'
+        _env           = env'
+        
+        _partitions    = Array[SchellingSpace](_numPartitions)
+        _cellStates    = Array[(USize, Bool)](_numCells)
+        _emptyCells    = Array[(USize, USize)](_numCells)
+
+    be startSimulation() =>
+        partitionSimulationSpace()
+        loadZeros()
+
+        for partition in _partitions.values() do 
+            partition.initStates()
+        end
+
+    be schellingUpdate(cellPosStates': Array[(USize, USize, Bool)] iso, emptyLocations': Array[(USize, USize)] iso) =>
+        let cellPosStates: Array[(USize, USize, Bool)] = consume cellPosStates'
+        let emptyCells:    Array[(USize, USize)] = consume emptyLocations'
+        
+        for posState in cellPosStates.values() do 
+            try _cellStates.update(posState._1, (posState._2, posState._3))? end
+        end
+
+        for empty in emptyCells.values() do 
+            _emptyCells.push(empty)
+        end
+
+        incrementCounter()
+
+        if((_counter == _numPartitions) and (_simEnd == false)) then
+            incrementEpoch()
+            resetCounter()
+            swapUnsatisfied(_cellStates, _emptyCells)
+            _emptyCells.clear()
+
+            let tempCopyCellStates: Array[USize] val = recover val createSendableCopy() end
+
+            if(_outputToFile) then PrintBoard(_file, _epoch, _sideLength, tempCopyCellStates) end
+
+            if(_epoch == _timeSteps) then finish() end
+
+            for sim in _partitions.values() do
+                sim.simStep(tempCopyCellStates)
+            end            
+        end
+
+    fun ref swapUnsatisfied(cellStates': Array[(USize, Bool)], emptyCells': Array[(USize, USize)]) =>
+        for i in Range(0, cellStates'.size()) do
+            try
+                if cellStates'(i)?._2 == false then 
+                    let randPosition = _rand.int_unbiased(emptyCells'.size().u64())
+
+                    let swapIndex = emptyCells'(randPosition.usize())?._1
+
+                    cellStates'.update(swapIndex, (cellStates'(i)?._1, true))?
+                    cellStates'.update(i, (0, true))?
+
+                    _emptyCells.delete(randPosition.usize())?
+                end
+            end
+        end
+
+    fun createSendableCopy(): Array[USize] iso^ =>
+        let tempCopyCellStates: Array[USize] iso = Array[USize](_numCells)
+
+        for value in _cellStates.values() do 
+            tempCopyCellStates.push(value._1)
+        end
+
+        tempCopyCellStates
+
+    fun ref loadZeros() =>
+        for index in Range(0, _numCells) do
+            _cellStates.push((0, true))
+        end
+
+    fun ref partitionSimulationSpace() =>
+        let sideLengthPerPartition: USize = Partitioning.sideLengthPerPartition(_sideLength, _numPartitions)
+        let partitionsPerSide:      USize = Partitioning.partitionsPerSide(_numPartitions)
+
+        for simPartitionIndex in Range(0, partitionsPerSide * partitionsPerSide) do
+            let indices: Array[USize] iso = Partitioning.cellIndices(simPartitionIndex, _sideLength, _numPartitions)
+
+            _partitions.push(SchellingSpace(sideLengthPerPartition, _sideLength, _numCells, _env.out, this, consume indices))
+        end
+
+    fun     counter():                USize => _counter
+    fun     epoch():                  USize => _epoch
+    fun ref finish()                        => _simEnd  = true
+    fun ref updateEpoch(v: USize):    USize => _epoch   = v
+    fun ref updateCounter(v: USize):  USize => _counter = v

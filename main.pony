@@ -6,30 +6,49 @@ actor Main
         let timeSteps:      USize       = try env.args(2)?.usize()? else 3                end
         let numPartitions:  USize       = try env.args(3)?.usize()? else 16               end
         let runNumber:      USize       = try env.args(4)?.usize()? else 0                end
-        let simulationType: String      = try env.args(5)?          else "game_of_life"   end
+        let simulationName: String      = try env.args(5)?          else "game_of_life"   end
         let outputToFile:   Bool        = try env.args(6)?.bool()?  else true             end
 
-        try
-            let dir: FilePath = FilePath.create(FileAuth(env.root), "output")
-            dir.mkdir()
+        match ParseSimulationType(simulationName)
+        | let simulationType: SimulationType =>
+            try
+                let dir: FilePath = FilePath.create(FileAuth(env.root), "output")
+                dir.mkdir()
 
-            let simFileName: FilePath = FilePath.from(dir, "simulation_output_" 
-                                                        + simulationType 
-                                                        + "_" 
-                                                        + runNumber.string() 
-                                                        + ".txt")?
+                let simFileName: FilePath = FilePath.from(dir, "simulation_output_"
+                                                            + simulationType.name()
+                                                            + "_"
+                                                            + runNumber.string()
+                                                            + ".txt")?
 
-            let file = recover iso
-                match CreateFile(simFileName)
-                | let f: File => f
-                else
-                    error
+                let file = recover iso
+                    match CreateFile(simFileName)
+                    | let f: File => f
+                    else
+                        error
+                    end
                 end
-            end
 
-            let coordinator: Coordinator = Coordinator(simSideLength, timeSteps, numPartitions, outputToFile, env, consume file)
-            
-            coordinator.startSimulation()
-        else
-            env.err.print("Cannot create output file")
+                match simulationType
+                | GameOfLife =>
+                    let coordinator: GameOfLifeCoordinator = GameOfLifeCoordinator(simSideLength, timeSteps, numPartitions, outputToFile, env, consume file)
+
+                    coordinator.startSimulation()
+                | Schelling =>
+                    let coordinator: SchellingCoordinator = SchellingCoordinator(simSideLength, timeSteps, numPartitions, outputToFile, env, consume file)
+
+                    coordinator.startSimulation()
+                end
+            else
+                env.err.print("Cannot create output file")
+            end
+        | None =>
+            env.err.print("Unknown simulation type \""
+                        + simulationName
+                        + "\". Use "
+                        + GameOfLife.name()
+                        + " or "
+                        + Schelling.name()
+                        + ".")
+            env.exitcode(1)
         end

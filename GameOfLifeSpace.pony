@@ -6,7 +6,7 @@ use "pony_test"
 use "./utils"
 use "./test"
 
-actor SimulationSpace is (CountingHandler & EpochHandler)
+actor GameOfLifeSpace is (CountingHandler & EpochHandler)
     let _sideLength:            USize val
     let _globalSideLength:      USize val
     let _numCells:              USize val
@@ -17,17 +17,17 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
     var _epoch:                 USize
     var _partitionCounter:      USize
 
-    let _coordinator:           Coordinator
+    let _coordinator:           GameOfLifeCoordinator
     let _rand:                  Rand
     let _out:                   OutStream
 
-    let _cells:                 Array[(USize, Cell, USize, Array[USize])]
-    let _neighboringPartitions: Array[SimulationSpace]
+    let _cells:                 Array[(USize, GameOfLifeCell, USize, Array[USize])]
+    let _neighboringPartitions: Array[GameOfLifeSpace]
     let _indices:               Array[(USize val, USize val)]
     let _cellPosState:          Array[(USize, USize)]
     let _nextCellPosState:      Array[(USize, USize)]
 
-    new create(sideLength': USize, globalSideLength': USize, totalCells': USize, position': USize, timeSteps': USize, out': OutStream, coordinator': Coordinator, indices': Array[(USize val, USize val)] iso) =>
+    new create(sideLength': USize, globalSideLength': USize, totalCells': USize, position': USize, timeSteps': USize, out': OutStream, coordinator': GameOfLifeCoordinator, indices': Array[(USize val, USize val)] iso) =>
         _sideLength            = recover val sideLength' end
         _globalSideLength      = globalSideLength'
         _indices               = consume indices'
@@ -39,10 +39,10 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
         _epoch                 = 0
         _partitionCounter      = 0
 
-        _cells                 = Array[(USize, Cell, USize, Array[USize])](_totalCells)
+        _cells                 = Array[(USize, GameOfLifeCell, USize, Array[USize])](_totalCells)
         _cellPosState          = Array[(USize, USize)](_numCells)
         _nextCellPosState      = Array[(USize, USize)](_numCells)
-        _neighboringPartitions = Array[SimulationSpace]
+        _neighboringPartitions = Array[GameOfLifeSpace]
 
         _rand                  = Rand.from_u64(Time.nanos())
         _out                   = out'
@@ -127,7 +127,7 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
             simStep()
         end
 
-    be addPartition(partition: SimulationSpace) => 
+    be addPartition(partition: GameOfLifeSpace) => 
         _neighboringPartitions.push(partition)
 
         _coordinator.initBarrier()
@@ -143,7 +143,7 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
                 cellNeighborPositions.push(neighbor)
             end
 
-            _cells.push((index._1, Cell(index._1, index._2, _out), 1, cellNeighborPositions))
+            _cells.push((index._1, GameOfLifeCell(index._1, index._2, _out), 1, cellNeighborPositions))
             _cellPosState.push((index._1, index._2))
         end
 
@@ -162,53 +162,3 @@ actor SimulationSpace is (CountingHandler & EpochHandler)
     fun     epoch():                 USize => _epoch
     fun ref updateEpoch(v: USize):   USize => _epoch   = v
     fun ref updateCounter(v: USize): USize => _counter = v
-
-    
-
-    // be initSchelling() =>
-    //     for index in _indices.values() do
-    //         let randStatus                          = _rand.int_unbiased(3)
-    //         let cellNeighborPositions: Array[USize] = Array[USize](8)
-
-    //         for (x, y) in NeighborFunctions.getNeighborCoordinates().values() do
-    //             let neighbor: USize = NeighborFunctions.calculateNeighbor(x, y, index, _globalSideLength)
-                
-    //             cellNeighborPositions.push(neighbor)
-    //         end
-
-    //         match randStatus
-    //         | 0 =>
-    //             _cells.push((index, SchellingCell(index, 0, 3, _out), 0, cellNeighborPositions))
-    //             _cellPosState.push((index, 0))
-    //         | 1 =>
-    //             _cells.push((index, SchellingCell(index, 1, 3, _out), 1, cellNeighborPositions))
-    //             _cellPosState.push((index, 1))
-    //         else
-    //             _cells.push((index, SchellingCell(index, 2, 3, _out), 2, cellNeighborPositions))
-    //             _cellPosState.push((index, 2))
-    //         end
-    //     end
-
-    //     let tempCopyCellStates: Array[(USize, USize)] iso = Array[(USize, USize)](_numCells)
-
-    //     for value in _cellPosState.values() do 
-    //         tempCopyCellStates.push(value)
-    //     end
-
-    //     _coordinator.cellStatesUpdated(consume tempCopyCellStates)
-
-    // be localSatisfactionCalculated(satisfaction: Bool, index: USize, state: USize) =>
-    //     _cellPosState.push((index, state))
-
-    //     incrementCounter()
-
-    //     if(_counter == _numCells) then 
-    //         let tempCopyCellStates: Array[(USize, USize)] iso = Array[(USize, USize)](_numCells)
-
-    //         for value in _cellPosState.values() do 
-    //             tempCopyCellStates.push(value)
-    //         end
-
-    //         resetCounter()
-    //         _coordinator.cellStatesUpdated(consume tempCopyCellStates)
-    //     end
