@@ -1,6 +1,6 @@
 use "collections"
 
-class Cell
+class GameOfLifeCell
     var _position: USize
     var _status:   USize
     var _previous: USize
@@ -14,7 +14,7 @@ class Cell
         _changed   = true
         _out       = out'
 
-    fun ref updateStatus(neighborStatuses: Array[USize] iso, sim: SimulationSpace) =>
+    fun ref updateStatus(neighborStatuses: Array[USize] iso, sim: GameOfLifeSpace) =>
         let statuses:         Array[USize]  = consume neighborStatuses
         var numLiveNeighbors: USize         = 0
 
